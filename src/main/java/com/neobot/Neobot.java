@@ -22,9 +22,28 @@ import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 
 public class Neobot extends ListenerAdapter {
-    
+
     private static final Long testChannelId = 1341942656816775209L;
     private static final Logger log = LoggerFactory.getLogger(Neobot.class);
+
+    /* TODO (HARD-VERYHARD) create an enumerable called WorldEvent that contains the following:
+        1. Event parent name (jiangshi)
+        2. Event button id  (jiangshiDied)
+        3. Event label (Regular Jiangshi boss died)
+        4. Event button reply text (, which channel did the boss die in?)
+        4. Event button prefix (j-)
+        5. Event spawn delay (5 minutes)
+    TODO move the static properties to WorldEvent and use the enumerable to get the values
+    TODO load those enum values into the interactions below
+    TODO generalize the interactions to use the enum values
+    TODO create more WorldEvents in the enum and slash command interactions for them */
+    
+    //TODO (MED) Create a slash (or text) command that links the user to bns live character lookup page (maybe NEO later)
+    //  http://na-bns.ncsoft.com/ingame/bs/character/search/info?c=
+    //  optional: use a button link!
+
+    //TODO (HARD-VERYHARD) Create a slash (or text) command that scrapes the bns live character lookup page and
+    //  extracts that data into a nice format for a discord message (I would use Selenium but whatever floats your boat)
 
     private static final long bossRespawnTimeMinutes = 5;
     private static final long lightningBossSpawnDelayMinutes = 2;
@@ -32,6 +51,7 @@ public class Neobot extends ListenerAdapter {
     private static final long discordUserInputDelaySeconds = 2;
 
     public static void main(String[] args) throws InterruptedException {
+        //TODO (EASY) extract token loading to a helper method
         Properties properties = new Properties();
         String token = null;
         try {
@@ -43,6 +63,7 @@ public class Neobot extends ListenerAdapter {
             log.error("Error reading token.properties file.");
         }
 
+        //TODO (EASY) set the bot's status to something appropriate
         JDA jda = JDABuilder
             .createDefault(token)
             .setActivity(null)
@@ -62,6 +83,7 @@ public class Neobot extends ListenerAdapter {
 
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
+        //TODO (MED-HARD) I am considering timing these messages out after 10 min - 1 hr, but I'm not sure if that's a good idea due to how many Tasks could be scheduled
         if(event.getName().equals("jiangshi")) {
             event.reply("")
             .addActionRow(
@@ -77,6 +99,8 @@ public class Neobot extends ListenerAdapter {
         Instant now = Instant.now();
         String buttonId =  event.getComponentId();
 
+        //TODO (MED) update these messages to be past tense after the set amount of time has passed - Try using net.dv8tion.jda.api.utils.concurrent.Task
+        //TODO (EASY) send these as regular messages instead of reply - currently with deletion of the original message, the reference is just "original message was deleted"
         if(buttonId.startsWith("j-")) {
             event.getMessage().delete().queue();
             long unixTimestamp = now.plus(Duration.ofMinutes(bossRespawnTimeMinutes)).minus(Duration.ofSeconds(discordUserInputDelaySeconds)).getEpochSecond();
@@ -91,6 +115,8 @@ public class Neobot extends ListenerAdapter {
             event.reply("Jiangshi boss will spawn in Channel " + buttonId.substring(4) + discordTimestamp(unixTimestamp)).queue();
         }
 
+        //TODO (EASY) make these messages ephemeral so that only the user that clicked the button can see them
+        //TODO (MED) time out these buttons if the user does not respond within ... lets say 5-10 seconds? - Try using net.dv8tion.jda.api.utils.concurrent.Task
         if(buttonId.equals("jiangshiDied")) {
             event.reply(event.getUser().getAsMention() + ", which channel did the boss die in?")
                 .addActionRow(getChannelButtons1to5("j-"))
@@ -122,6 +148,7 @@ public class Neobot extends ListenerAdapter {
         TextChannel channel = event.getChannel().asTextChannel();
         List<Long> allowedChannels = new ArrayList<Long>();
         allowedChannels.add(testChannelId);
+        //If you want to test text-based commands, you can add the channel ID here
 
         if (allowedChannels.contains(channel.getIdLong())) {
             //!hello
