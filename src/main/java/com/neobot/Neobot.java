@@ -1,11 +1,9 @@
 package com.neobot;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,15 +50,10 @@ public class Neobot extends ListenerAdapter {
 
     public static void main(String[] args) throws InterruptedException {
         //TODO (EASY) extract token loading to a helper method
-        Properties properties = new Properties();
-        String token = null;
-        try {
-            properties.load(Neobot.class.getClassLoader().getResourceAsStream("token.properties"));
-            token = properties.getProperty("token");
-        } catch (NullPointerException e) {
-            log.error("Token not found. Please create a token.properties file in the resources folder with the token.");
-        } catch (IOException e) {
-            log.error("Error reading token.properties file.");
+        String token = System.getenv("neobot-token");
+        if(isNullOrEmpty(token)) {
+            log.error("Token not found. Please set the environment variable neobot-token with the token.");
+            return;
         }
 
         //TODO (EASY) set the bot's status to something appropriate
@@ -165,7 +158,7 @@ public class Neobot extends ListenerAdapter {
         return message.toLowerCase().startsWith(command.toLowerCase());
     }
 
-    private boolean isNullOrEmpty(String... set) {
+    private static boolean isNullOrEmpty(String... set) {
         for(String s : set) {
             if(s == null) return true;
             if(s.isEmpty()) return true;

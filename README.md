@@ -1,4 +1,4 @@
-To run the bot, you need a Discord bot token. If you already have one, create a token.properties file in src/main/resources/ and then add a line that says token=________
+To run the bot, you need a Discord bot token. If you already have one, create a system environment variable called neobot-token that contains the token.
 
 If you don't already have one, you will need to go to the Discord Developer Portal and create a new application.
 Then, go to the OAuth2 tab in the sidebar and look at the OAuth2 URL Generator. Check Bot. Check the bot permissions you want it to have.
