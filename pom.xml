@@ -31,6 +31,12 @@
             <artifactId>slf4j-simple</artifactId>
             <version>1.7.36</version>
         </dependency>
+        <dependency> <!-- Lombok -->
+		    <groupId>org.projectlombok</groupId>
+		    <artifactId>lombok</artifactId>
+		    <version>1.18.36</version>
+		    <scope>provided</scope>
+	    </dependency>
     </dependencies>
 
     <build>

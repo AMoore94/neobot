@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Executors;
@@ -22,6 +23,8 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 
@@ -29,86 +32,74 @@ public class Neobot extends ListenerAdapter {
 
     private static final Long testChannelId = 1342573327247741039L;
     private static final Logger log = LoggerFactory.getLogger(Neobot.class);
-
-    /* TODO (HARD-VERYHARD) create an enumerable called WorldEvent that contains the following:
-        1. Event parent name (jiangshi)
-        2. Event button id  (jiangshiDied)
-        3. Event label (Regular Jiangshi boss died)
-        4. Event button reply text (, which channel did the boss die in?)
-        4. Event button prefix (j-)
-        5. Event spawn delay (5 minutes)
-    TODO move the static properties to WorldEvent and use the enumerable to get the values
-    TODO load those enum values into the interactions below
-    TODO generalize the interactions to use the enum values
-    TODO create more WorldEvents in the enum and slash command interactions for them */
     
-    //TODO (MED) Create a slash (or text) command that links the user to bns live character lookup page (maybe NEO later)
+    //TODO [4FUN] (MED) Create a slash (or text) command that links the user to bns live character lookup page (maybe NEO later)
     //  http://na-bns.ncsoft.com/ingame/bs/character/search/info?c=
     //  optional: use a button link!
 
-    //TODO (HARD-VERYHARD) Create a slash (or text) command that scrapes the bns live character lookup page and
+    //TODO [4FUN] (HARD-VERYHARD) Create a slash (or text) command that scrapes the bns live character lookup page and
     //  extracts that data into a nice format for a discord message (I would use Selenium but whatever floats your boat)
 
-    private static final long bossRespawnTimeMinutes = 5;
-    private static final long lightningBossSpawnDelayMinutes = 2;
-    private static final long lightningBossRespawnDelayMinutes = 8;
     private static final long discordUserInputDelaySeconds = 2;
     private static final long timeAfterSpawnMsgDeletionMinutes = 1;
+    private static final long slashCommandReplyTimeoutDeletionMinutes = 60;
 
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+    private static final List<WorldEvent> worldEvents = new ArrayList<WorldEvent>();
 
     public static void main(String[] args) throws InterruptedException {
         JDA jda = JDABuilder
             .createDefault(getToken())
-            .setActivity(Activity.customStatus("Waiting for launch day"))
+            .setActivity(Activity.customStatus( "Under construction..." )) //"Waiting for launch day"))
             .addEventListeners(new Neobot())
             .enableIntents(GatewayIntent.MESSAGE_CONTENT) //, GatewayIntent.GUILD_MESSAGES)
             .build();
         jda.awaitReady();
 
-        //Already added commands:
-        //jda.updateCommands().addCommands(Commands.slash("jiangshi", "Jiangshi World Boss options")).queue();
+        //Verify all necessary commands exist:
+        List<SlashCommandData> newCommands = new ArrayList<SlashCommandData>();
+        for(WorldBoss wb : WorldBoss.values()) {
+            newCommands.add(Commands.slash(wb.getCommandName(), wb.getDisplayName() + " World Boss options"));
+        }
+        jda.updateCommands().addCommands(newCommands).queue();
+
+        //Add all the world events to a static list for use here
+        worldEvents.addAll(Arrays.asList(WorldEvent.values()));
     }
 
     @Override
     public void onReady(ReadyEvent event) {
-        log.warn("Bot successfully deployed.");
+        log.info("Bot successfully deployed.");
     }
 
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
-        //TODO (HARD) I am considering timing these messages out after 10 min - 1 hr, but I'm not sure if that's a good idea due to how many Tasks could be scheduled
-        if(event.getName().equals("jiangshi")) {
-            event.reply("")
-            .addActionRow(
-                Button.primary("jiangshiDied", "Regular Jiangshi boss died"),
-                Button.primary("jiangshiLightningStart", "Jiangshi lightning started"),
-                Button.primary("jiangshiLightningDied", "Jiangshi lightning boss died"))
-            .queue();
-        }
+        //If other non-world-boss commands are added, need more conditional checks here
+        WorldBoss wb = WorldBoss.valueOf(event.getName());
+        List<WorldEvent> events = wb.getEvents();
+        event.reply("").addActionRow(createButtons(events)).queue(message -> {
+            // Schedule the message to be deleted slashCommandReplyTimeoutDeletionMinutes minutes after the spawn time
+            scheduler.schedule(() -> message.deleteOriginal().queue(), slashCommandReplyTimeoutDeletionMinutes, TimeUnit.MINUTES);
+        });
     }
 
     @Override
     public void onButtonInteraction(ButtonInteractionEvent event) {
         String buttonId =  event.getComponentId();
+        List<String> buttonInputs = Arrays.asList(buttonId.split("-"));
 
-        if(buttonId.startsWith("j-")) {
-            String channel = buttonId.substring(2);
-            sendEventTimestampMessage(event, "Jiangshi       ", channel, bossRespawnTimeMinutes);
-        } else if(buttonId.startsWith("jl-")) {
-            String channel = buttonId.substring(3);
-            sendEventTimestampMessage(event, ":zap: Jiangshi", channel, lightningBossSpawnDelayMinutes);
-        } else if(buttonId.startsWith("jlx-")) {
-            String channel = buttonId.substring(4);
-            sendEventTimestampMessage(event, "Jiangshi       ", channel, lightningBossRespawnDelayMinutes);
-        }
-
-        if(buttonId.equals("jiangshiDied")) {
-            sendChannelPromptMessage(event, ", which channel did the boss die in?", "j-");
-        } else if(buttonId.equals("jiangshiLightningStart")) {
-            sendChannelPromptMessage(event, ", which channel did the lightning start in?", "jl-");
-        } else if(buttonId.equals("jiangshiLightningDied")) {
-            sendChannelPromptMessage(event, ", which channel did the lightning boss die in?", "jlx-");
+        if(buttonInputs.size() > 1) {
+            String buttonPrefix = buttonInputs.get(0) + "-";
+            String channel = buttonInputs.get(1);
+            WorldEvent we = worldEvents.stream().filter(e -> e.getButtonPrefix().equals(buttonPrefix)).findFirst().orElse(null);
+            if(we != null) {
+                sendEventTimestampMessage(event, we.getDisplayName(), channel, we.getSpawnDelayMinutes());
+            }
+        } else {
+            WorldEvent we = worldEvents.stream().filter(e -> e.getButtonId().equals(buttonId)).findFirst().orElse(null);
+            if(we != null) {
+                sendChannelPromptMessage(event, we.getButtonReplyText(), we.getButtonPrefix());
+            }
         }
     }
 
@@ -214,11 +205,23 @@ public class Neobot extends ListenerAdapter {
     }
 
     private void sendChannelPromptMessage(ButtonInteractionEvent event, String prompt, String buttonIDprefix) {
-        //TODO (HARD) time out these buttons if the user does not respond within ... lets say 5-10 seconds?
         event.reply(event.getUser().getAsMention() + prompt)
                 .addActionRow(getChannelButtons1to5(buttonIDprefix))
                 .addActionRow(getChannelButtons6to10(buttonIDprefix))
                 .setEphemeral(true)
                 .queue();
+    }
+
+    private List<Button> createButtons(List<WorldEvent> events) {
+        if(events == null) return null;
+        if(events.size() > 5) {
+            log.error("Too many events for a single row of buttons.");
+            return null;
+        }
+        List<Button> actionRowList = new ArrayList<Button>();
+        for(WorldEvent event : events) {
+            actionRowList.add(Button.primary(event.getButtonId(), event.getLabel()));
+        }
+        return actionRowList;
     }
 }
