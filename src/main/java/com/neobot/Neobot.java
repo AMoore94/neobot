@@ -1,6 +1,7 @@
 package com.neobot;
 
 import java.io.IOException;
+import java.text.BreakIterator;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -77,7 +78,10 @@ public class Neobot extends ListenerAdapter {
         //If other non-world-boss commands are added, need more conditional checks here
         WorldBoss wb = WorldBoss.valueOf(event.getName());
         List<WorldEvent> events = wb.getEvents();
-        event.reply("").addActionRow(createButtons(events)).queue(message -> {
+        event.reply("")
+             .addActionRow(createButtons(events))
+             .setEphemeral(true)
+             .queue(message -> {
             // Schedule the message to be deleted slashCommandReplyTimeoutDeletionMinutes minutes after the spawn time
             scheduler.schedule(() -> message.deleteOriginal().queue(), slashCommandReplyTimeoutDeletionMinutes, TimeUnit.MINUTES);
         });
@@ -186,22 +190,11 @@ public class Neobot extends ListenerAdapter {
         event.deferEdit().queue();
         Instant spawnTime = now.plus(Duration.ofMinutes(delayMinutes)).minus(Duration.ofSeconds(discordUserInputDelaySeconds));
         long unixTimestamp = spawnTime.getEpochSecond();
-        String messageText = bossName + "     |" + bufferedChannelString(channel) + "|     " + discordTimestamp(unixTimestamp);
+        String messageText = "`" + bufferedBossString(bossName) + "|" + bufferedChannelString(channel) + "|`     " + discordTimestamp(unixTimestamp);
         event.getChannel().sendMessage(messageText).queue(message -> {
             // Schedule the message to be deleted timeAfterSpawnMsgDeletionMinutes minutes after the spawn time
             scheduler.schedule(() -> message.delete().queue(), delayMinutes + timeAfterSpawnMsgDeletionMinutes, TimeUnit.MINUTES);
         });
-    }
-    
-    //Really not the most elegant way to do it but whatever.
-    private String bufferedChannelString(String channel) {
-        String bufferedString = "     Channel " + channel + "   ";
-        switch(channel) {
-            case "1": return bufferedString + "   ";
-            case "10": return bufferedString;
-            default:
-                return bufferedString + "  ";
-        }
     }
 
     private void sendChannelPromptMessage(ButtonInteractionEvent event, String prompt, String buttonIDprefix) {
@@ -223,5 +216,48 @@ public class Neobot extends ListenerAdapter {
             actionRowList.add(Button.primary(event.getButtonId(), event.getLabel()));
         }
         return actionRowList;
+    }
+
+    private String bufferedBossString(String bossName) {
+        return centeredString(bossName, 25);
+    }
+
+    private String bufferedChannelString(String channel) {
+        return centeredString("Channel " + channel, 15);
+    }
+
+    /**
+     * Centers a String s into a padded string of given length, prioritizing Left padding
+     * @param s
+     * @param length
+     * @return
+     */
+    private String centeredString(String s, int length) {
+        if(length <1) return "";
+        if(s == null) return "";
+        int diff = length - getGraphicalLength(s);
+        if(diff <1) return s;
+        int right = diff/2;
+        int left = diff-right;
+        String result = "";
+        for(int i=0; i<left; i++) {
+            result += " ";
+        }
+        result += s;
+        for(int i=0; i<right; i++) {
+            result += " ";
+        }
+        return result;
+    }
+
+    //This handles ⚡️⚡️ characters counting as 2 chars each
+    private int getGraphicalLength(String s) {
+        BreakIterator iterator = BreakIterator.getCharacterInstance();
+        iterator.setText(s);
+        int count = 0;
+        while (iterator.next() != BreakIterator.DONE) {
+            count++;
+        }
+        return count;
     }
 }
