@@ -1,15 +1,21 @@
 package com.neobot;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -47,19 +53,14 @@ public class Neobot extends ListenerAdapter {
     private static final long lightningBossSpawnDelayMinutes = 2;
     private static final long lightningBossRespawnDelayMinutes = 8;
     private static final long discordUserInputDelaySeconds = 2;
+    private static final long timeAfterSpawnMsgDeletionMinutes = 1;
+
+    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
 
     public static void main(String[] args) throws InterruptedException {
-        //TODO (EASY) extract token loading to a helper method
-        String token = System.getenv("neobot-token");
-        if(isNullOrEmpty(token)) {
-            log.error("Token not found. Please set the environment variable neobot-token with the token.");
-            return;
-        }
-
-        //TODO (EASY) set the bot's status to something appropriate
         JDA jda = JDABuilder
-            .createDefault(token)
-            .setActivity(null)
+            .createDefault(getToken())
+            .setActivity(Activity.customStatus("Waiting for launch day"))
             .addEventListeners(new Neobot())
             .enableIntents(GatewayIntent.MESSAGE_CONTENT) //, GatewayIntent.GUILD_MESSAGES)
             .build();
@@ -76,7 +77,7 @@ public class Neobot extends ListenerAdapter {
 
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
-        //TODO (MED-HARD) I am considering timing these messages out after 10 min - 1 hr, but I'm not sure if that's a good idea due to how many Tasks could be scheduled
+        //TODO (HARD) I am considering timing these messages out after 10 min - 1 hr, but I'm not sure if that's a good idea due to how many Tasks could be scheduled
         if(event.getName().equals("jiangshi")) {
             event.reply("")
             .addActionRow(
@@ -89,42 +90,25 @@ public class Neobot extends ListenerAdapter {
 
     @Override
     public void onButtonInteraction(ButtonInteractionEvent event) {
-        Instant now = Instant.now();
         String buttonId =  event.getComponentId();
 
-        //TODO (MED) update these messages to be past tense after the set amount of time has passed - Try using net.dv8tion.jda.api.utils.concurrent.Task
-        //TODO (EASY) send these as regular messages instead of reply - currently with deletion of the original message, the reference is just "original message was deleted"
         if(buttonId.startsWith("j-")) {
-            event.getMessage().delete().queue();
-            long unixTimestamp = now.plus(Duration.ofMinutes(bossRespawnTimeMinutes)).minus(Duration.ofSeconds(discordUserInputDelaySeconds)).getEpochSecond();
-            event.reply("Jiangshi boss will respawn in Channel " + buttonId.substring(2) + discordTimestamp(unixTimestamp)).queue();
+            String channel = buttonId.substring(2);
+            sendEventTimestampMessage(event, "Jiangshi       ", channel, bossRespawnTimeMinutes);
         } else if(buttonId.startsWith("jl-")) {
-            event.getMessage().delete().queue();
-            long unixTimestamp = now.plus(Duration.ofMinutes(lightningBossSpawnDelayMinutes)).minus(Duration.ofSeconds(discordUserInputDelaySeconds)).getEpochSecond();
-            event.reply(":zap: Lightning :zap: Jiangshi boss will spawn in Channel " + buttonId.substring(3) + discordTimestamp(unixTimestamp)).queue();
+            String channel = buttonId.substring(3);
+            sendEventTimestampMessage(event, ":zap: Jiangshi", channel, lightningBossSpawnDelayMinutes);
         } else if(buttonId.startsWith("jlx-")) {
-            event.getMessage().delete().queue();
-            long unixTimestamp = now.plus(Duration.ofMinutes(lightningBossRespawnDelayMinutes)).minus(Duration.ofSeconds(discordUserInputDelaySeconds)).getEpochSecond();
-            event.reply("Jiangshi boss will spawn in Channel " + buttonId.substring(4) + discordTimestamp(unixTimestamp)).queue();
+            String channel = buttonId.substring(4);
+            sendEventTimestampMessage(event, "Jiangshi       ", channel, lightningBossRespawnDelayMinutes);
         }
 
-        //TODO (EASY) make these messages ephemeral so that only the user that clicked the button can see them
-        //TODO (MED) time out these buttons if the user does not respond within ... lets say 5-10 seconds? - Try using net.dv8tion.jda.api.utils.concurrent.Task
         if(buttonId.equals("jiangshiDied")) {
-            event.reply(event.getUser().getAsMention() + ", which channel did the boss die in?")
-                .addActionRow(getChannelButtons1to5("j-"))
-                .addActionRow(getChannelButtons6to10("j-"))
-                .queue();
+            sendChannelPromptMessage(event, ", which channel did the boss die in?", "j-");
         } else if(buttonId.equals("jiangshiLightningStart")) {
-            event.reply(event.getUser().getAsMention() + ", which channel did the lightning start in?")
-                .addActionRow(getChannelButtons1to5("jl-"))
-                .addActionRow(getChannelButtons6to10("jl-"))
-                .queue();
+            sendChannelPromptMessage(event, ", which channel did the lightning start in?", "jl-");
         } else if(buttonId.equals("jiangshiLightningDied")) {
-            event.reply(event.getUser().getAsMention() + ", which channel did the lightning boss die in?")
-                .addActionRow(getChannelButtons1to5("jlx-"))
-                .addActionRow(getChannelButtons6to10("jlx-"))
-                .queue();
+            sendChannelPromptMessage(event, ", which channel did the lightning boss die in?", "jlx-");
         }
     }
 
@@ -184,5 +168,57 @@ public class Neobot extends ListenerAdapter {
 
     private String discordTimestamp(long unixTimestamp) {
         return "<t:" + unixTimestamp + ":R>";
+    }
+
+    private static String getToken() {
+        //Try loading from environment variable
+        String token = System.getenv("neobot-token");
+        if(token != null) return token;
+
+        //Try loading from properties file
+        Properties properties = new Properties();
+        try {
+            properties.load(Neobot.class.getClassLoader().getResourceAsStream("token.properties"));
+            return properties.getProperty("token");
+        } catch (NullPointerException e) {
+            log.error("Token not found. Please create a token.properties file in the resources folder with the token.");
+        } catch (IOException e) {
+            log.error("Error reading token.properties file.");
+        }
+
+        return null;
+    }
+
+    private void sendEventTimestampMessage(ButtonInteractionEvent event, String bossName, String channel, long delayMinutes) {
+        Instant now = Instant.now();
+        event.getMessage().delete().queue();
+        event.deferEdit().queue();
+        Instant spawnTime = now.plus(Duration.ofMinutes(delayMinutes)).minus(Duration.ofSeconds(discordUserInputDelaySeconds));
+        long unixTimestamp = spawnTime.getEpochSecond();
+        String messageText = bossName + "     |" + bufferedChannelString(channel) + "|     " + discordTimestamp(unixTimestamp);
+        event.getChannel().sendMessage(messageText).queue(message -> {
+            // Schedule the message to be deleted timeAfterSpawnMsgDeletionMinutes minutes after the spawn time
+            scheduler.schedule(() -> message.delete().queue(), delayMinutes + timeAfterSpawnMsgDeletionMinutes, TimeUnit.MINUTES);
+        });
+    }
+    
+    //Really not the most elegant way to do it but whatever.
+    private String bufferedChannelString(String channel) {
+        String bufferedString = "     Channel " + channel + "   ";
+        switch(channel) {
+            case "1": return bufferedString + "   ";
+            case "10": return bufferedString;
+            default:
+                return bufferedString + "  ";
+        }
+    }
+
+    private void sendChannelPromptMessage(ButtonInteractionEvent event, String prompt, String buttonIDprefix) {
+        //TODO (HARD) time out these buttons if the user does not respond within ... lets say 5-10 seconds?
+        event.reply(event.getUser().getAsMention() + prompt)
+                .addActionRow(getChannelButtons1to5(buttonIDprefix))
+                .addActionRow(getChannelButtons6to10(buttonIDprefix))
+                .setEphemeral(true)
+                .queue();
     }
 }
