@@ -1,7 +1,6 @@
 package com.neobot;
 
 import java.io.IOException;
-import java.text.BreakIterator;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -18,10 +17,8 @@ import org.slf4j.LoggerFactory;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
@@ -31,18 +28,13 @@ import net.dv8tion.jda.api.requests.GatewayIntent;
 
 public class Neobot extends ListenerAdapter {
 
-    private static final Long testChannelId = 1342573327247741039L;
     private static final Logger log = LoggerFactory.getLogger(Neobot.class);
     
-    //TODO [4FUN] (MED) Create a slash (or text) command that links the user to bns live character lookup page (maybe NEO later)
+    //Bns live character lookup page (maybe NEO later?)
     //  http://na-bns.ncsoft.com/ingame/bs/character/search/info?c=
-    //  optional: use a button link!
 
-    //TODO [4FUN] (HARD-VERYHARD) Create a slash (or text) command that scrapes the bns live character lookup page and
-    //  extracts that data into a nice format for a discord message (I would use Selenium but whatever floats your boat)
-
-    private static final long discordUserInputDelaySeconds = 2;
-    private static final long timeAfterSpawnMsgDeletionMinutes = 1;
+    private static final long discordUserInputDelaySeconds = 5;
+    private static final long timeAfterSpawnMsgDeletionMinutes = 5;
     private static final long slashCommandReplyTimeoutDeletionMinutes = 60;
 
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
@@ -75,7 +67,7 @@ public class Neobot extends ListenerAdapter {
 
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
-        //If other non-world-boss commands are added, need more conditional checks here
+        //If other non-world-boss commands are added, add them before this
         WorldBoss wb = WorldBoss.valueOf(event.getName());
         List<WorldEvent> events = wb.getEvents();
         event.reply("")
@@ -83,7 +75,13 @@ public class Neobot extends ListenerAdapter {
              .setEphemeral(true)
              .queue(message -> {
             // Schedule the message to be deleted slashCommandReplyTimeoutDeletionMinutes minutes after the spawn time
-            scheduler.schedule(() -> message.deleteOriginal().queue(), slashCommandReplyTimeoutDeletionMinutes, TimeUnit.MINUTES);
+            scheduler.schedule(() -> {
+                try {
+                    message.deleteOriginal().queue();
+                } catch (Exception e) {
+                    log.warn("Ephemeral message failed to delete. Most likely the user already dismissed it.");
+                }
+            }, slashCommandReplyTimeoutDeletionMinutes, TimeUnit.MINUTES);
         });
     }
 
@@ -107,44 +105,7 @@ public class Neobot extends ListenerAdapter {
         }
     }
 
-    @Override
-    public void onMessageReceived(MessageReceivedEvent event) {
-        //Ignore all messages from bots
-        if (event.getAuthor().isBot()) return;
-
-        String message = event.getMessage().getContentRaw();
-
-        //Ignore all messages that don't start with !
-        if (!message.startsWith("!")) return;
-
-        TextChannel channel = event.getChannel().asTextChannel();
-        List<Long> allowedChannels = new ArrayList<Long>();
-        allowedChannels.add(testChannelId);
-        //If you want to test text-based commands, you can add the channel ID here
-
-        if (allowedChannels.contains(channel.getIdLong())) {
-            //!hello
-            if (isCommand(message, "hello")) {
-                channel.sendMessage("Hello, " + event.getAuthor().getAsMention() + "!").queue();
-            }
-        }
-    }
-
     //Helper methods
-    private boolean isCommand(String message, String command) {
-        if(isNullOrEmpty(message, command)) return false;
-        if(message.startsWith("!")) return isCommand(message.substring(1), command);
-        return message.toLowerCase().startsWith(command.toLowerCase());
-    }
-
-    private static boolean isNullOrEmpty(String... set) {
-        for(String s : set) {
-            if(s == null) return true;
-            if(s.isEmpty()) return true;
-        }
-        return false;
-    }
-
     private List<Button> getChannelButtons(String buttonIDPrefix, int start) {
         List<Button> actionRowList = new ArrayList<Button>();
         for(int i = start; i < start+5; i++) {
@@ -190,7 +151,8 @@ public class Neobot extends ListenerAdapter {
         event.deferEdit().queue();
         Instant spawnTime = now.plus(Duration.ofMinutes(delayMinutes)).minus(Duration.ofSeconds(discordUserInputDelaySeconds));
         long unixTimestamp = spawnTime.getEpochSecond();
-        String messageText = "`" + bufferedBossString(bossName) + "|" + bufferedChannelString(channel) + "|`     " + discordTimestamp(unixTimestamp);
+        String quote = bossName.startsWith("Mutated") ? "> " : "";
+        String messageText = quote + "`" + bufferedBossString(bossName, 30-quote.length()) + "|" + bufferedChannelString(channel) + "|`     " + discordTimestamp(unixTimestamp);
         event.getChannel().sendMessage(messageText).queue(message -> {
             // Schedule the message to be deleted timeAfterSpawnMsgDeletionMinutes minutes after the spawn time
             scheduler.schedule(() -> message.delete().queue(), delayMinutes + timeAfterSpawnMsgDeletionMinutes, TimeUnit.MINUTES);
@@ -218,8 +180,8 @@ public class Neobot extends ListenerAdapter {
         return actionRowList;
     }
 
-    private String bufferedBossString(String bossName) {
-        return centeredString(bossName, 25);
+    private String bufferedBossString(String bossName, int len) {
+        return centeredString(bossName, len);
     }
 
     private String bufferedChannelString(String channel) {
@@ -235,7 +197,7 @@ public class Neobot extends ListenerAdapter {
     private String centeredString(String s, int length) {
         if(length <1) return "";
         if(s == null) return "";
-        int diff = length - getGraphicalLength(s);
+        int diff = length - s.length();
         if(diff <1) return s;
         int right = diff/2;
         int left = diff-right;
@@ -248,16 +210,5 @@ public class Neobot extends ListenerAdapter {
             result += " ";
         }
         return result;
-    }
-
-    //This handles ⚡️⚡️ characters counting as 2 chars each
-    private int getGraphicalLength(String s) {
-        BreakIterator iterator = BreakIterator.getCharacterInstance();
-        iterator.setText(s);
-        int count = 0;
-        while (iterator.next() != BreakIterator.DONE) {
-            count++;
-        }
-        return count;
     }
 }
