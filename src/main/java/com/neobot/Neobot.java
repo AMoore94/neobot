@@ -21,7 +21,7 @@ import net.dv8tion.jda.api.requests.GatewayIntent;
 
 public class Neobot extends ListenerAdapter {
 
-    private static final Long testChannelId = 1341942656816775209L;
+    private static final Long testChannelId = 1342573327247741039L;
     private static final Logger log = LoggerFactory.getLogger(Neobot.class);
 
     /* TODO (HARD-VERYHARD) create an enumerable called WorldEvent that contains the following:
@@ -169,7 +169,7 @@ public class Neobot extends ListenerAdapter {
     private List<Button> getChannelButtons(String buttonIDPrefix, int start) {
         List<Button> actionRowList = new ArrayList<Button>();
         for(int i = start; i < start+5; i++) {
-            actionRowList.add(Button.primary(buttonIDPrefix + i, String.valueOf(i)));
+            actionRowList.add(Button.secondary(buttonIDPrefix + i, String.valueOf(i)));
         }
         return actionRowList;
     }
