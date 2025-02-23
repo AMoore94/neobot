@@ -47,6 +47,8 @@ public class Neobot extends ListenerAdapter {
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
     private static final List<WorldEvent> worldEvents = new ArrayList<WorldEvent>();
 
+    private static final int customEmbedColor = 3 << 16 | 252 << 8 | 190;
+
     private HashMap<TextChannel, Boolean> heavensReachChannels = new HashMap<TextChannel, Boolean>();
     private HashMap<TextChannel, Boolean> viridianCoastChannels = new HashMap<TextChannel, Boolean>();
 
@@ -67,6 +69,7 @@ public class Neobot extends ListenerAdapter {
         newCommands.add(Commands.slash("server", "Select which server you are playing on").addOption(OptionType.STRING, "server", "Use Heaven's Reach (HR) or Viridian Coast (VC) to set the server for this channel"));
         newCommands.add(Commands.slash("global", "Enable/disable countdowns from other discord servers").addOption(OptionType.BOOLEAN, "global", "Use TRUE to enable and FALSE to disable global countdowns for this channel"));
         newCommands.add(Commands.slash("help", "How to use the bot"));
+        newCommands.add(Commands.slash("wb", "Show all of the world boss slash commands"));
         jda.updateCommands().addCommands(newCommands).queue();
 
         //Add all the world events to a static list for use here
@@ -95,13 +98,26 @@ public class Neobot extends ListenerAdapter {
             return;
         }
 
+        // /wb
+        if(event.getName().equals("wb")) {
+            EmbedBuilder eb = new EmbedBuilder();
+            eb.setTitle("World Boss Commands:");
+            eb.setDescription(createWBDescription());
+            eb.setColor(customEmbedColor);
+            event.reply("")
+                 .addEmbeds(eb.build())
+                 .setEphemeral(true)
+                 .queue();
+        return;
+        }
+
         // /help
         if(event.getName().equals("help")) {
             EmbedBuilder eb = new EmbedBuilder();
             eb.setAuthor("NEOBot");
-            eb.setColor(3 << 16 | 252 << 8 | 190);
-            eb.setDescription("Hi! Thanks for using my bot. To get started, use the slash commands. There is a " +
-                              "slash command for each world boss. Then, once you are comfortable with that, you " + 
+            eb.setColor(customEmbedColor);
+            eb.setDescription("Hi! Thanks for using my bot. To get started, use /wb to see the available World Boss " +
+                              "commands. Once you are comfortable with using the commands and starting countdowns, you " + 
                               "can use /server <servername> to set your server to Heaven's Reach or Viridian Coast. " +
                               "If you like, you can then turn on the global feature using /global true. That will " + 
                               "enable you to get boss spawn countdowns from other Discord servers that are on the " +
@@ -135,6 +151,7 @@ public class Neobot extends ListenerAdapter {
 
             String serverName = event.getOption("server").getAsString().toLowerCase();
             Boolean global = isHeavensReachServer ? heavensReachChannels.get(channel) : viridianCoastChannels.get(channel);
+            if(global == null) global = false;
             if(serverName.contains("h")) {
                 viridianCoastChannels.remove(channel);
                 heavensReachChannels.putIfAbsent(channel, global);
@@ -381,5 +398,17 @@ public class Neobot extends ListenerAdapter {
             result += " ";
         }
         return result;
+    }
+
+    /**
+     * Creates a description for the /wb command using all available world boss commands
+     * @return
+     */
+    private String createWBDescription() {
+        String description = "";
+        for(WorldBoss wb : WorldBoss.values()) {
+            description += "**/" + wb.getCommandName() + "**\n";
+        }
+        return description;
     }
 }
