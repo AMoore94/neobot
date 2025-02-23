@@ -96,10 +96,12 @@ public class Neobot extends ListenerAdapter {
         if(event.getName().equals("server")) {
             TextChannel channel = event.getChannel().asTextChannel();
             OptionMapping option = event.getOption("server");
+            Boolean isHeavensReachServer = heavensReachChannels.containsKey(channel);
+            Boolean isViridianCoastServer = viridianCoastChannels.containsKey(channel);
             if(option == null) {
-                if(heavensReachChannels.containsKey(channel)) {
+                if(isHeavensReachServer) {
                     event.reply("This channel is currently set to Heaven's Reach.").setEphemeral(true).queue();
-                } else if(viridianCoastChannels.containsKey(channel)) {
+                } else if(isViridianCoastServer) {
                     event.reply("This channel is currently set to Viridian Coast.").setEphemeral(true).queue();
                 } else {
                     event.reply("This channel is not currently set to a server. Use /server <servername> to set the server.").setEphemeral(true).queue();
@@ -107,15 +109,15 @@ public class Neobot extends ListenerAdapter {
                 return;
             }
 
-            //TODO - make it so that Global ON/OFF is maintained when switching servers
             String serverName = event.getOption("server").getAsString().toLowerCase();
+            Boolean global = isHeavensReachServer ? heavensReachChannels.get(channel) : viridianCoastChannels.get(channel);
             if(serverName.contains("h")) {
                 viridianCoastChannels.remove(channel);
-                heavensReachChannels.putIfAbsent(channel, false);
+                heavensReachChannels.putIfAbsent(channel, global);
                 event.reply("This channel has been added to the Heaven's Reach server list.").queue();
             } else if (serverName.contains("v")) {
                 heavensReachChannels.remove(channel);
-                viridianCoastChannels.putIfAbsent(channel, false);
+                viridianCoastChannels.putIfAbsent(channel, global);
                 event.reply("This channel has been added to the Viridian Coast server list.").queue();
             } else {
                 event.reply("Your server name was not recognized. No changes were made.").setEphemeral(true).queue();
