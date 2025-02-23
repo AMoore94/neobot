@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
@@ -52,7 +53,7 @@ public class Neobot extends ListenerAdapter {
     public static void main(String[] args) throws InterruptedException {
         JDA jda = JDABuilder
             .createDefault(getToken())
-            .setActivity(Activity.customStatus( "Fighting demons"))
+            .setActivity(Activity.customStatus( "Use /help to learn about me!"))
             .addEventListeners(new Neobot())
             .enableIntents(GatewayIntent.MESSAGE_CONTENT)
             .build();
@@ -65,6 +66,7 @@ public class Neobot extends ListenerAdapter {
         }
         newCommands.add(Commands.slash("server", "Select which server you are playing on").addOption(OptionType.STRING, "server", "Use Heaven's Reach (HR) or Viridian Coast (VC) to set the server for this channel"));
         newCommands.add(Commands.slash("global", "Enable/disable countdowns from other discord servers").addOption(OptionType.BOOLEAN, "global", "Use TRUE to enable and FALSE to disable global countdowns for this channel"));
+        newCommands.add(Commands.slash("help", "How to use the bot"));
         jda.updateCommands().addCommands(newCommands).queue();
 
         //Add all the world events to a static list for use here
@@ -93,6 +95,28 @@ public class Neobot extends ListenerAdapter {
             return;
         }
 
+        // /help
+        if(event.getName().equals("help")) {
+            EmbedBuilder eb = new EmbedBuilder();
+            eb.setAuthor("NEOBot");
+            eb.setColor(3 << 16 | 252 << 8 | 190);
+            eb.setDescription("Hi! Thanks for using my bot. To get started, use the slash commands. There is a " +
+                              "slash command for each world boss. Then, once you are comfortable with that, you " + 
+                              "can use /server <servername> to set your server to Heaven's Reach or Viridian Coast. " +
+                              "If you like, you can then turn on the global feature using /global true. That will " + 
+                              "enable you to get boss spawn countdowns from other Discord servers that are on the " +
+                              "same server as you.\n\n**Please note:** at this time, the bot does not store your preferences. " + 
+                              "If there is a server outage or a new version of the bot is launched, you will have to " +
+                              "reapply your /server and /global settings.");
+            eb.setFooter("@tesqupport");
+            event.reply("")
+                 .addEmbeds(eb.build())
+                 .setEphemeral(true)
+                 .queue();
+            return;
+        }
+
+        // /server
         if(event.getName().equals("server")) {
             TextChannel channel = event.getChannel().asTextChannel();
             OptionMapping option = event.getOption("server");
@@ -125,6 +149,7 @@ public class Neobot extends ListenerAdapter {
             return;
         }
 
+        // /global
         if(event.getName().equals("global")) {
             TextChannel channel = event.getChannel().asTextChannel();
             OptionMapping option = event.getOption("global");
@@ -169,7 +194,7 @@ public class Neobot extends ListenerAdapter {
             return;
         }
 
-        //If other non-world-boss commands are added, add them before this
+        //All other world boss slash commands handled here
         WorldBoss wb = WorldBoss.valueOf(event.getName());
         List<WorldEvent> events = wb.getEvents();
         event.reply("")
