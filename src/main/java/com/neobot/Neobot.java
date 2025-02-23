@@ -38,9 +38,10 @@ public class Neobot extends ListenerAdapter {
     //Bns live character lookup page (maybe NEO later?)
     //  http://na-bns.ncsoft.com/ingame/bs/character/search/info?c=
 
+    private static final String botInviteURL = "https://discord.com/oauth2/authorize?client_id=1341938087156252672&permissions=563484677240896&integration_type=0&scope=bot";
+
     private static final long discordUserInputDelaySeconds = 5;
     private static final long timeAfterSpawnMsgDeletionMinutes = 5;
-    private static final long slashCommandReplyTimeoutDeletionMinutes = 60;
 
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
     private static final List<WorldEvent> worldEvents = new ArrayList<WorldEvent>();
@@ -51,9 +52,9 @@ public class Neobot extends ListenerAdapter {
     public static void main(String[] args) throws InterruptedException {
         JDA jda = JDABuilder
             .createDefault(getToken())
-            .setActivity(Activity.customStatus( "Searching for bugs..." )) //"Waiting for launch day"))
+            .setActivity(Activity.customStatus( "Fighting demons"))
             .addEventListeners(new Neobot())
-            .enableIntents(GatewayIntent.MESSAGE_CONTENT) //, GatewayIntent.GUILD_MESSAGES)
+            .enableIntents(GatewayIntent.MESSAGE_CONTENT)
             .build();
         jda.awaitReady();
 
@@ -83,6 +84,15 @@ public class Neobot extends ListenerAdapter {
             return;
         }
 
+        //If guild is detached, the bot is most likely added as an App instead of a Bot User
+        if(event.getGuild().isDetached()) {
+            log.info("Detached guild detected.");
+            event.reply("This bot needs to be added as a user to your server and have permissions in this channel.")
+                 .addActionRow(Button.link(botInviteURL, "Add the bot user"))
+                 .setEphemeral(true).queue();
+            return;
+        }
+
         if(event.getName().equals("server")) {
             TextChannel channel = event.getChannel().asTextChannel();
             OptionMapping option = event.getOption("server");
@@ -97,6 +107,7 @@ public class Neobot extends ListenerAdapter {
                 return;
             }
 
+            //TODO - make it so that Global ON/OFF is maintained when switching servers
             String serverName = event.getOption("server").getAsString().toLowerCase();
             if(serverName.contains("h")) {
                 viridianCoastChannels.remove(channel);
@@ -162,16 +173,7 @@ public class Neobot extends ListenerAdapter {
         event.reply("")
              .addActionRow(createButtons(events))
              .setEphemeral(true)
-             .queue(message -> {
-            // Schedule the message to be deleted slashCommandReplyTimeoutDeletionMinutes minutes after the spawn time
-            scheduler.schedule(() -> {
-                try {
-                    message.deleteOriginal().queue();
-                } catch (Exception e) {
-                    log.warn("Ephemeral message failed to delete. Most likely the user already dismissed it.");
-                }
-            }, slashCommandReplyTimeoutDeletionMinutes, TimeUnit.MINUTES);
-        });
+             .queue();
     }
 
     @Override
@@ -195,6 +197,7 @@ public class Neobot extends ListenerAdapter {
     }
 
     //Helper methods
+    //TODO these channel button helpers can be refactored to be more generic
     private List<Button> getChannelButtons(String buttonIDPrefix, int start) {
         List<Button> actionRowList = new ArrayList<Button>();
         for(int i = start; i < start+5; i++) {
