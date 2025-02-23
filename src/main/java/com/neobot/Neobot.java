@@ -118,10 +118,10 @@ public class Neobot extends ListenerAdapter {
             eb.setColor(customEmbedColor);
             eb.setDescription("Hi! Thanks for using my bot. To get started, use /wb to see the available World Boss " +
                               "commands. Once you are comfortable with using the commands and starting countdowns, you " + 
-                              "can use /server <servername> to set your server to Heaven's Reach or Viridian Coast. " +
-                              "If you like, you can then turn on the global feature using /global true. That will " + 
-                              "enable you to get boss spawn countdowns from other Discord servers that are on the " +
-                              "same server as you.\n\n**Please note:** at this time, the bot does not store your preferences. " + 
+                              "can use /server <servername> to set **THIS CHANNEL**'s server setting to Heaven's Reach " +
+                              "or Viridian Coast. If you like, you can then turn on the global feature using /global true. " +
+                              "That will enable you to get boss spawn countdowns from other Discord channels that are on the " +
+                              "same server setting.\n\n**Please note:** at this time, the bot does not store your preferences. " + 
                               "If there is a server outage or a new version of the bot is launched, you will have to " +
                               "reapply your /server and /global settings.");
             eb.setFooter("@tesqupport");
