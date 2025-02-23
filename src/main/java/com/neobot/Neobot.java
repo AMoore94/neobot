@@ -197,27 +197,33 @@ public class Neobot extends ListenerAdapter {
     }
 
     //Helper methods
-    //TODO these channel button helpers can be refactored to be more generic
-    private List<Button> getChannelButtons(String buttonIDPrefix, int start) {
+    /**
+     * Creates Buttons for use in an ActionRow
+     * @param buttonIDPrefix
+     * @param startIndex
+     * @return List of 5 Button that are labeled starting with startIndex given
+     */
+    private List<Button> createActionRowOfButtons(String buttonIDPrefix, int startIndex) {
         List<Button> actionRowList = new ArrayList<Button>();
-        for(int i = start; i < start+5; i++) {
+        for(int i = startIndex; i < startIndex+5; i++) {
             actionRowList.add(Button.secondary(buttonIDPrefix + i, String.valueOf(i)));
         }
         return actionRowList;
     }
 
-    private List<Button> getChannelButtons1to5(String buttonIDPrefix) {
-        return getChannelButtons(buttonIDPrefix, 1);
-    }
-
-    private List<Button> getChannelButtons6to10(String buttonIDPrefix) {
-        return getChannelButtons(buttonIDPrefix, 6);
-    }
-
+    /**
+     * Turns a long Unix timestamp into a Discord-formatted relative timestamp
+     * @param unixTimestamp
+     * @return String containing a date timestamp formatted for use in discord message text
+     */
     private String discordTimestamp(long unixTimestamp) {
         return "<t:" + unixTimestamp + ":R>";
     }
 
+    /**
+     * Tries to get "neobot-token" from the environment config, otherwise looks for a "token.properties"
+     * @return String token
+     */
     private static String getToken() {
         //Try loading from environment variable
         String token = System.getenv("neobot-token");
@@ -237,6 +243,13 @@ public class Neobot extends ListenerAdapter {
         return null;
     }
 
+    /**
+     * Sends a timestamped message in the event's text channel formatted nicely with the boss name and respawn timer
+     * @param event
+     * @param bossName
+     * @param channel
+     * @param delayMinutes
+     */
     private void sendEventTimestampMessage(ButtonInteractionEvent event, String bossName, String channel, long delayMinutes) {
         Instant now = Instant.now();
         event.getMessage().delete().queue();
@@ -244,18 +257,19 @@ public class Neobot extends ListenerAdapter {
         Instant spawnTime = now.plus(Duration.ofMinutes(delayMinutes)).minus(Duration.ofSeconds(discordUserInputDelaySeconds));
         long unixTimestamp = spawnTime.getEpochSecond();
         String quote = bossName.startsWith("Mutated") ? "> " : "";
-        String messageText = quote + "`" + bufferedBossString(bossName, 30-quote.length()) + "|" + bufferedChannelString(channel) + "|`     " + discordTimestamp(unixTimestamp);
+        channel = "Channel " + channel;
+        String messageText = quote + "`" + centeredString(bossName, 30-quote.length()) + "|" + centeredString(channel, 15) + "|`     " + discordTimestamp(unixTimestamp);
         TextChannel textChannel = event.getChannel().asTextChannel();
 
         //Send the default message
-        timestampMessage(textChannel, messageText, delayMinutes);
+        sendTimestampMessage(textChannel, messageText, delayMinutes);
 
         //Send global countdowns:
         //If channel is a Heaven's Reach channel
         if(heavensReachChannels.containsKey(textChannel)) {
             heavensReachChannels.forEach((key, value) -> {
                 if(value && !key.equals(textChannel)) {
-                    timestampMessage(key, messageText, delayMinutes);
+                    sendTimestampMessage(key, messageText, delayMinutes);
                 }
             });
         }
@@ -263,15 +277,21 @@ public class Neobot extends ListenerAdapter {
         if(viridianCoastChannels.containsKey(textChannel)) {
             viridianCoastChannels.forEach((key, value) -> {
                 if(value && !key.equals(textChannel)) {
-                    timestampMessage(key, messageText, delayMinutes);
+                    sendTimestampMessage(key, messageText, delayMinutes);
                 }
             });
         }
     }
 
-    private void timestampMessage(TextChannel channel, String messageText, long delayMinutes) {
+    /**
+     * Sends a text message to a channel that deletes itself after:
+     *      delayMinutes + timeAfterSpawnMsgDeletionMinutes
+     * @param channel
+     * @param messageText
+     * @param delayMinutes
+     */
+    private void sendTimestampMessage(TextChannel channel, String messageText, long delayMinutes) {
         channel.sendMessage(messageText).queue(message -> {
-            // Schedule the message to be deleted timeAfterSpawnMsgDeletionMinutes minutes after the spawn time
             try {
                 scheduler.schedule(() -> message.delete().queue(), delayMinutes + timeAfterSpawnMsgDeletionMinutes, TimeUnit.MINUTES);
             } catch (Exception e) {
@@ -280,14 +300,25 @@ public class Neobot extends ListenerAdapter {
         });
     }
 
+    /**
+     * Sends a reply to a ButtonInteractionEvent with given prompt that has two ActionRow of 5 Button each with button IDs 1-10
+     * @param event
+     * @param prompt
+     * @param buttonIDprefix
+     */
     private void sendChannelPromptMessage(ButtonInteractionEvent event, String prompt, String buttonIDprefix) {
         event.reply(event.getUser().getAsMention() + prompt)
-                .addActionRow(getChannelButtons1to5(buttonIDprefix))
-                .addActionRow(getChannelButtons6to10(buttonIDprefix))
+                .addActionRow(createActionRowOfButtons(buttonIDprefix, 1))
+                .addActionRow(createActionRowOfButtons(buttonIDprefix, 6))
                 .setEphemeral(true)
                 .queue();
     }
 
+    /**
+     * Creates a List of up to 5 Button for use in an ActionRow
+     * @param events
+     * @return List of Buttons for given list of WorldEvent, or null if the list has more than 5 WorldEvent
+     */
     private List<Button> createButtons(List<WorldEvent> events) {
         if(events == null) return null;
         if(events.size() > 5) {
@@ -301,16 +332,8 @@ public class Neobot extends ListenerAdapter {
         return actionRowList;
     }
 
-    private String bufferedBossString(String bossName, int len) {
-        return centeredString(bossName, len);
-    }
-
-    private String bufferedChannelString(String channel) {
-        return centeredString("Channel " + channel, 15);
-    }
-
     /**
-     * Centers a String s into a padded string of given length, prioritizing Left padding
+     * Centers a String s into a padded String of given length, prioritizing Left padding
      * @param s
      * @param length
      * @return
