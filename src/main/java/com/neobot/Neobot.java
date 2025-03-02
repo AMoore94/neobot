@@ -124,7 +124,7 @@ public class Neobot extends ListenerAdapter {
                               "same server setting.\n\n**Please note:** at this time, the bot does not store your preferences. " + 
                               "If there is a server outage or a new version of the bot is launched, you will have to " +
                               "reapply your /server and /global settings.");
-            eb.setFooter("@tesqupport");
+            eb.setFooter("@teqsupport");
             event.reply("")
                  .addEmbeds(eb.build())
                  .setEphemeral(true)
@@ -354,6 +354,9 @@ public class Neobot extends ListenerAdapter {
         event.reply(event.getUser().getAsMention() + prompt)
                 .addActionRow(createActionRowOfButtons(buttonIDprefix, 1))
                 .addActionRow(createActionRowOfButtons(buttonIDprefix, 6))
+                .addActionRow(createActionRowOfButtons(buttonIDprefix, 11))
+                .addActionRow(createActionRowOfButtons(buttonIDprefix, 16))
+                .addActionRow(createActionRowOfButtons(buttonIDprefix, 21))
                 .setEphemeral(true)
                 .queue();
     }
