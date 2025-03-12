@@ -12,12 +12,11 @@ public enum WorldBoss {
     wufu("wufu","Top Dog Wu Fu", "Songshu Isle", 18, List.of(WorldEvent.TOP_DOG_WU_FU, WorldEvent.TOP_DOG_WU_FU_LIGHTNING_START, WorldEvent.TOP_DOG_WU_FU_LIGHTNING_DIED)),
     bulbari("bulbari","King Bulbari", "Tomun Range", 25, List.of(WorldEvent.KING_BULBARI, WorldEvent.KING_BULBARI_LIGHTNING_START, WorldEvent.KING_BULBARI_LIGHTNING_DIED)),
     deva("deva","Golden Deva", "Scorching Sands", 30, List.of(WorldEvent.GOLDEN_DEVA, WorldEvent.GOLDEN_DEVA_LIGHTNING_START, WorldEvent.GOLDEN_DEVA_LIGHTNING_DIED)),
-    pinchy("pinchy","Pinchy", "Scorcing Sands", 35, List.of(WorldEvent.PINCHY, WorldEvent.PINCHY_LIGHTNING_START, WorldEvent.PINCHY_LIGHTNING_DIED));
-    //TODO: Enable these on Moonwater patch
-    // lycan("lycan","Lycan", "Lycandi Foothills", 38, List.of(WorldEvent.LYCAN, WorldEvent.LYCAN_LIGHTNING_START, WorldEvent.LYCAN_LIGHTNING_DIED)),
-    // kaari("kaari","King Kaari", "Sapphire Basin", 42, List.of(WorldEvent.KING_KAARI, WorldEvent.KING_KAARI_LIGHTNING_START, WorldEvent.KING_KAARI_LIGHTNING_DIED)),
-    // profanejiangshi("profanejiangshi","Profane Jiangshi", "Highland Necropolis", 43, List.of(WorldEvent.PROFANE_JIANGSHI, WorldEvent.PROFANE_JIANGSHI_LIGHTNING_START, WorldEvent.PROFANE_JIANGSHI_LIGHTNING_DIED)),
-    // sajifi("sajifi","Sajifi", "Misty Woods", 44, List.of(WorldEvent.SAJIFI, WorldEvent.SAJIFI_LIGHTNING_START, WorldEvent.SAJIFI_LIGHTNING_DIED));
+    pinchy("pinchy","Pinchy", "Scorcing Sands", 35, List.of(WorldEvent.PINCHY, WorldEvent.PINCHY_LIGHTNING_START, WorldEvent.PINCHY_LIGHTNING_DIED)),
+    lycan("lycan","Lycan", "Lycandi Foothills", 38, List.of(WorldEvent.LYCAN, WorldEvent.LYCAN_LIGHTNING_START, WorldEvent.LYCAN_LIGHTNING_DIED)),
+    kaari("kaari","King Kaari", "Sapphire Basin", 42, List.of(WorldEvent.KING_KAARI, WorldEvent.KING_KAARI_LIGHTNING_START, WorldEvent.KING_KAARI_LIGHTNING_DIED)),
+    profanejiangshi("profanejiangshi","Profane Jiangshi", "Highland Necropolis", 43, List.of(WorldEvent.PROFANE_JIANGSHI, WorldEvent.PROFANE_JIANGSHI_LIGHTNING_START, WorldEvent.PROFANE_JIANGSHI_LIGHTNING_DIED)),
+    sajifi("sajifi","Sajifi", "Misty Woods", 44, List.of(WorldEvent.SAJIFI, WorldEvent.SAJIFI_LIGHTNING_START, WorldEvent.SAJIFI_LIGHTNING_DIED));
 
     private final String commandName;
     private final String displayName;
