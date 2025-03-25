@@ -23,18 +23,18 @@ public enum WorldEvent {
     PINCHY("Pinchy", "pinchyDied", "Pinchy boss died", ", which channel did the boss die in?", "p-", 5),
     PINCHY_LIGHTNING_START("Mutated Pinchy", "pinchyLightningStart", "Pinchy lightning started", ", which channel did the lightning start in?", "pl-", 2),
     PINCHY_LIGHTNING_DIED("Pinchy", "pinchyLightningDied", "Pinchy lightning boss died", ", which channel did the lightning boss die in?", "plx-", 8),
-    LYCAN("lycan", "lycanDied", "Lycan boss died", ", which channel did the boss die in?", "l-", 5),
-    LYCAN_LIGHTNING_START("lycan", "lycanLightningStart", "Lycan lightning started", ", which channel did the lightning start in?", "ll-", 2),
-    LYCAN_LIGHTNING_DIED("lycan", "lycanLightningDied", "Lycan lightning boss died", ", which channel did the lightning boss die in?", "llx-", 8),
-    KING_KAARI("kaari", "kingKaariDied", "King Kaari boss died", ", which channel did the boss die in?", "kk-", 5),
-    KING_KAARI_LIGHTNING_START("kaari", "kingKaariLightningStart", "King Kaari lightning started", ", which channel did the lightning start in?", "kkl-", 2),
-    KING_KAARI_LIGHTNING_DIED("kaari", "kingKaariLightningDied", "King Kaari lightning boss died", ", which channel did the lightning boss die in?", "kklx-", 8),
-    PROFANE_JIANGSHI("profanejiangshi", "profaneJiangshiDied", "Profane Jiangshi boss died", ", which channel did the boss die in?", "pj-", 5),
-    PROFANE_JIANGSHI_LIGHTNING_START("profanejiangshi", "profaneJiangshiLightningStart", "Profane Jiangshi lightning started", ", which channel did the lightning start in?", "pjl-", 2),
-    PROFANE_JIANGSHI_LIGHTNING_DIED("profanejiangshi", "profaneJiangshiLightningDied", "Profane Jiangshi lightning boss died", ", which channel did the lightning boss die in?", "pjlx-", 8),
-    SAJIFI("sajifi", "sajifiDied", "Sajifi boss died", ", which channel did the boss die in?", "s-", 5),
-    SAJIFI_LIGHTNING_START("sajifi", "sajifiLightningStart", "Sajifi lightning started", ", which channel did the lightning start in?", "sl-", 2),
-    SAJIFI_LIGHTNING_DIED("sajifi", "sajifiLightningDied", "Sajifi lightning boss died", ", which channel did the lightning boss die in?", "slx-", 8);
+    LYCAN("Lycan", "lycanDied", "Lycan boss died", ", which channel did the boss die in?", "l-", 5),
+    LYCAN_LIGHTNING_START("Mutated Lycan", "lycanLightningStart", "Lycan lightning started", ", which channel did the lightning start in?", "ll-", 2),
+    LYCAN_LIGHTNING_DIED("Lycan", "lycanLightningDied", "Lycan lightning boss died", ", which channel did the lightning boss die in?", "llx-", 8),
+    KING_KAARI("Kaari", "kingKaariDied", "King Kaari boss died", ", which channel did the boss die in?", "kk-", 5),
+    KING_KAARI_LIGHTNING_START("Mutated Kaari", "kingKaariLightningStart", "King Kaari lightning started", ", which channel did the lightning start in?", "kkl-", 2),
+    KING_KAARI_LIGHTNING_DIED("Kaari", "kingKaariLightningDied", "King Kaari lightning boss died", ", which channel did the lightning boss die in?", "kklx-", 8),
+    PROFANE_JIANGSHI("Profane Jiangshi", "profaneJiangshiDied", "Profane Jiangshi boss died", ", which channel did the boss die in?", "pj-", 5),
+    PROFANE_JIANGSHI_LIGHTNING_START("Mutated Profane Jiangshi", "profaneJiangshiLightningStart", "Profane Jiangshi lightning started", ", which channel did the lightning start in?", "pjl-", 2),
+    PROFANE_JIANGSHI_LIGHTNING_DIED("Profane Jiangshi", "profaneJiangshiLightningDied", "Profane Jiangshi lightning boss died", ", which channel did the lightning boss die in?", "pjlx-", 8),
+    SAJIFI("Sajifi", "sajifiDied", "Sajifi boss died", ", which channel did the boss die in?", "s-", 5),
+    SAJIFI_LIGHTNING_START("Mutated Sajifi", "sajifiLightningStart", "Sajifi lightning started", ", which channel did the lightning start in?", "sl-", 2),
+    SAJIFI_LIGHTNING_DIED("Sajifi", "sajifiLightningDied", "Sajifi lightning boss died", ", which channel did the lightning boss die in?", "slx-", 8);
 
     private final String displayName;
     private final String buttonId;
