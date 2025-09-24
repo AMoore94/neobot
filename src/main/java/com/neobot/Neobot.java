@@ -25,8 +25,6 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
@@ -49,6 +47,8 @@ public class Neobot extends ListenerAdapter {
 
     private static final int customEmbedColor = 3 << 16 | 252 << 8 | 190;
 
+    private static final List<FieldEvent> fieldEvents = new ArrayList<FieldEvent>();
+
     private HashMap<TextChannel, Boolean> heavensReachChannels = new HashMap<TextChannel, Boolean>();
     private HashMap<TextChannel, Boolean> viridianCoastChannels = new HashMap<TextChannel, Boolean>();
 
@@ -66,14 +66,19 @@ public class Neobot extends ListenerAdapter {
         for(WorldBoss wb : WorldBoss.values()) {
             newCommands.add(Commands.slash(wb.getCommandName(), wb.getDisplayName() + " World Boss options"));
         }
-        newCommands.add(Commands.slash("server", "Select which server you are playing on").addOption(OptionType.STRING, "server", "Use Heaven's Reach (HR) or Viridian Coast (VC) to set the server for this channel"));
-        newCommands.add(Commands.slash("global", "Enable/disable countdowns from other discord servers").addOption(OptionType.BOOLEAN, "global", "Use TRUE to enable and FALSE to disable global countdowns for this channel"));
-        newCommands.add(Commands.slash("help", "How to use the bot"));
+        // newCommands.add(Commands.slash("server", "Select which server you are playing on").addOption(OptionType.STRING, "server", "Use Heaven's Reach (HR) or Viridian Coast (VC) to set the server for this channel"));
+        // newCommands.add(Commands.slash("global", "Enable/disable countdowns from other discord servers").addOption(OptionType.BOOLEAN, "global", "Use TRUE to enable and FALSE to disable global countdowns for this channel"));
+        // newCommands.add(Commands.slash("help", "How to use the bot"));
         newCommands.add(Commands.slash("wb", "Show all of the world boss slash commands"));
         jda.updateCommands().addCommands(newCommands).queue();
 
         //Add all the world events to a static list for use here
         worldEvents.addAll(Arrays.asList(WorldEvent.values()));
+
+        //Load field events from csv file
+        loadFieldEvents();
+        //Schedeule Silverfrost Field Boss timers
+        scheduleFBTimers(jda);
     }
 
     @Override
@@ -112,104 +117,104 @@ public class Neobot extends ListenerAdapter {
         }
 
         // /help
-        if(event.getName().equals("help")) {
-            EmbedBuilder eb = new EmbedBuilder();
-            eb.setAuthor("NEOBot");
-            eb.setColor(customEmbedColor);
-            eb.setDescription("Hi! Thanks for using my bot. To get started, use /wb to see the available World Boss " +
-                              "commands. Once you are comfortable with using the commands and starting countdowns, you " + 
-                              "can use /server <servername> to set **THIS CHANNEL**'s server setting to Heaven's Reach " +
-                              "or Viridian Coast. If you like, you can then turn on the global feature using /global true. " +
-                              "That will enable you to get boss spawn countdowns from other Discord channels that are on the " +
-                              "same server setting.\n\n**Please note:** at this time, the bot does not store your preferences. " + 
-                              "If there is a server outage or a new version of the bot is launched, you will have to " +
-                              "reapply your /server and /global settings.");
-            eb.setFooter("@teqsupport");
-            event.reply("")
-                 .addEmbeds(eb.build())
-                 .setEphemeral(true)
-                 .queue();
-            return;
-        }
+        // if(event.getName().equals("help")) {
+        //     EmbedBuilder eb = new EmbedBuilder();
+        //     eb.setAuthor("NEOBot");
+        //     eb.setColor(customEmbedColor);
+        //     eb.setDescription("Hi! Thanks for using my bot. To get started, use /wb to see the available World Boss " +
+        //                       "commands. Once you are comfortable with using the commands and starting countdowns, you " + 
+        //                       "can use /server <servername> to set **THIS CHANNEL**'s server setting to Heaven's Reach " +
+        //                       "or Viridian Coast. If you like, you can then turn on the global feature using /global true. " +
+        //                       "That will enable you to get boss spawn countdowns from other Discord channels that are on the " +
+        //                       "same server setting.\n\n**Please note:** at this time, the bot does not store your preferences. " + 
+        //                       "If there is a server outage or a new version of the bot is launched, you will have to " +
+        //                       "reapply your /server and /global settings.");
+        //     eb.setFooter("@teqsupport");
+        //     event.reply("")
+        //          .addEmbeds(eb.build())
+        //          .setEphemeral(true)
+        //          .queue();
+        //     return;
+        // }
 
         // /server
-        if(event.getName().equals("server")) {
-            TextChannel channel = event.getChannel().asTextChannel();
-            OptionMapping option = event.getOption("server");
-            Boolean isHeavensReachServer = heavensReachChannels.containsKey(channel);
-            Boolean isViridianCoastServer = viridianCoastChannels.containsKey(channel);
-            if(option == null) {
-                if(isHeavensReachServer) {
-                    event.reply("This channel is currently set to Heaven's Reach.").setEphemeral(true).queue();
-                } else if(isViridianCoastServer) {
-                    event.reply("This channel is currently set to Viridian Coast.").setEphemeral(true).queue();
-                } else {
-                    event.reply("This channel is not currently set to a server. Use /server <servername> to set the server.").setEphemeral(true).queue();
-                }
-                return;
-            }
+        // if(event.getName().equals("server")) {
+        //     TextChannel channel = event.getChannel().asTextChannel();
+        //     OptionMapping option = event.getOption("server");
+        //     Boolean isHeavensReachServer = heavensReachChannels.containsKey(channel);
+        //     Boolean isViridianCoastServer = viridianCoastChannels.containsKey(channel);
+        //     if(option == null) {
+        //         if(isHeavensReachServer) {
+        //             event.reply("This channel is currently set to Heaven's Reach.").setEphemeral(true).queue();
+        //         } else if(isViridianCoastServer) {
+        //             event.reply("This channel is currently set to Viridian Coast.").setEphemeral(true).queue();
+        //         } else {
+        //             event.reply("This channel is not currently set to a server. Use /server <servername> to set the server.").setEphemeral(true).queue();
+        //         }
+        //         return;
+        //     }
 
-            String serverName = event.getOption("server").getAsString().toLowerCase();
-            Boolean global = isHeavensReachServer ? heavensReachChannels.get(channel) : viridianCoastChannels.get(channel);
-            if(global == null) global = false;
-            if(serverName.contains("h")) {
-                viridianCoastChannels.remove(channel);
-                heavensReachChannels.putIfAbsent(channel, global);
-                event.reply("This channel has been added to the Heaven's Reach server list.").queue();
-            } else if (serverName.contains("v")) {
-                heavensReachChannels.remove(channel);
-                viridianCoastChannels.putIfAbsent(channel, global);
-                event.reply("This channel has been added to the Viridian Coast server list.").queue();
-            } else {
-                event.reply("Your server name was not recognized. No changes were made.").setEphemeral(true).queue();
-            }
-            return;
-        }
+        //     String serverName = event.getOption("server").getAsString().toLowerCase();
+        //     Boolean global = isHeavensReachServer ? heavensReachChannels.get(channel) : viridianCoastChannels.get(channel);
+        //     if(global == null) global = false;
+        //     if(serverName.contains("h")) {
+        //         viridianCoastChannels.remove(channel);
+        //         heavensReachChannels.putIfAbsent(channel, global);
+        //         event.reply("This channel has been added to the Heaven's Reach server list.").queue();
+        //     } else if (serverName.contains("v")) {
+        //         heavensReachChannels.remove(channel);
+        //         viridianCoastChannels.putIfAbsent(channel, global);
+        //         event.reply("This channel has been added to the Viridian Coast server list.").queue();
+        //     } else {
+        //         event.reply("Your server name was not recognized. No changes were made.").setEphemeral(true).queue();
+        //     }
+        //     return;
+        // }
 
         // /global
-        if(event.getName().equals("global")) {
-            TextChannel channel = event.getChannel().asTextChannel();
-            OptionMapping option = event.getOption("global");
-            if(option == null) {
-                if(heavensReachChannels.containsKey(channel)) {
-                    Boolean value = heavensReachChannels.get(channel);
-                    event.reply("This channel is currently set to Global " + (value ? "ON" : "OFF") + ". It will " + (value ? "" : "NOT ") + "receive messages from other servers.").setEphemeral(true).queue();
-                } else if(viridianCoastChannels.containsKey(channel)) {
-                    Boolean value = viridianCoastChannels.get(channel);
-                    event.reply("This channel is currently set to Global " + (value ? "ON" : "OFF") + ". It will " + (value ? "" : "NOT ") + "receive messages from other servers.").setEphemeral(true).queue();
-                } else {
-                    event.reply("You first need to specify a game server for this channel using /server.").setEphemeral(true).queue();
-                }
-                return;
-            }
+        // if(event.getName().equals("global")) {
+        //     TextChannel channel = event.getChannel().asTextChannel();
+        //     OptionMapping option = event.getOption("global");
+        //     if(option == null) {
+        //         if(heavensReachChannels.containsKey(channel)) {
+        //             Boolean value = heavensReachChannels.get(channel);
+        //             event.reply("This channel is currently set to Global " + (value ? "ON" : "OFF") + ". It will " + (value ? "" : "NOT ") + "receive messages from other servers.").setEphemeral(true).queue();
+        //         } else if(viridianCoastChannels.containsKey(channel)) {
+        //             Boolean value = viridianCoastChannels.get(channel);
+        //             event.reply("This channel is currently set to Global " + (value ? "ON" : "OFF") + ". It will " + (value ? "" : "NOT ") + "receive messages from other servers.").setEphemeral(true).queue();
+        //         } else {
+        //             event.reply("You first need to specify a game server for this channel using /server.").setEphemeral(true).queue();
+        //         }
+        //         return;
+        //     }
 
-            Boolean globalOption;
-            try {
-                globalOption = event.getOption("global").getAsBoolean();
-            } catch (IllegalStateException e) {
-                event.reply("You need to provide TRUE or FALSE for the /global command.").setEphemeral(true).queue();
-                return;
-            }
+        //     Boolean globalOption;
+        //     try {
+        //         globalOption = event.getOption("global").getAsBoolean();
+        //     } catch (IllegalStateException e) {
+        //         event.reply("You need to provide TRUE or FALSE for the /global command.").setEphemeral(true).queue();
+        //         return;
+        //     }
             
-            if(heavensReachChannels.containsKey(channel)) {
-                heavensReachChannels.put(channel, globalOption);
-                if(globalOption) {
-                    event.reply("Global ON. You will now receive countdowns from other Heaven's Reach servers.").queue();
-                } else {
-                    event.reply("Global OFF. You will NOT receive countdowns from other servers.").queue();
-                }
-            } else if(viridianCoastChannels.containsKey(channel)) {
-                viridianCoastChannels.put(channel, globalOption);
-                if(globalOption) {
-                    event.reply("Global ON. You will now receive countdowns from other Viridian Coast servers.").queue();
-                } else {
-                    event.reply("Global OFF. You will NOT receive countdowns from other servers.").queue();
-                }
-            } else {
-                event.reply("You first need to specify a game server for this channel using /server.").setEphemeral(true).queue();
-            }
-            return;
-        }
+        //     if(heavensReachChannels.containsKey(channel)) {
+        //         heavensReachChannels.put(channel, globalOption);
+        //         if(globalOption) {
+        //             event.reply("Global ON. You will now receive countdowns from other Heaven's Reach servers.").queue();
+        //         } else {
+        //             event.reply("Global OFF. You will NOT receive countdowns from other servers.").queue();
+        //         }
+        //     } else if(viridianCoastChannels.containsKey(channel)) {
+        //         viridianCoastChannels.put(channel, globalOption);
+        //         if(globalOption) {
+        //             event.reply("Global ON. You will now receive countdowns from other Viridian Coast servers.").queue();
+        //         } else {
+        //             event.reply("Global OFF. You will NOT receive countdowns from other servers.").queue();
+        //         }
+        //     } else {
+        //         event.reply("You first need to specify a game server for this channel using /server.").setEphemeral(true).queue();
+        //     }
+        //     return;
+        // }
 
         //All other world boss slash commands handled here
         WorldBoss wb = WorldBoss.valueOf(event.getName());
@@ -353,10 +358,10 @@ public class Neobot extends ListenerAdapter {
     private void sendChannelPromptMessage(ButtonInteractionEvent event, String prompt, String buttonIDprefix) {
         event.reply(event.getUser().getAsMention() + prompt)
                 .addActionRow(createActionRowOfButtons(buttonIDprefix, 1))
-                .addActionRow(createActionRowOfButtons(buttonIDprefix, 6))
-                .addActionRow(createActionRowOfButtons(buttonIDprefix, 11))
-                .addActionRow(createActionRowOfButtons(buttonIDprefix, 16))
-                .addActionRow(createActionRowOfButtons(buttonIDprefix, 21))
+                // .addActionRow(createActionRowOfButtons(buttonIDprefix, 6))
+                // .addActionRow(createActionRowOfButtons(buttonIDprefix, 11))
+                // .addActionRow(createActionRowOfButtons(buttonIDprefix, 16))
+                // .addActionRow(createActionRowOfButtons(buttonIDprefix, 21))
                 .setEphemeral(true)
                 .queue();
     }
@@ -413,5 +418,74 @@ public class Neobot extends ListenerAdapter {
             description += "**/" + wb.getCommandName() + "**\n";
         }
         return description;
+    }
+
+
+    private static void loadFieldEvents() {
+        //Load field events from csv file
+        try (var reader = new java.io.BufferedReader(new java.io.InputStreamReader(Neobot.class.getClassLoader().getResourceAsStream("FieldEvent.csv")))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                if(parts.length == 3) {
+                    String time = parts[0].trim();
+                    String dayString = parts[1].trim().toUpperCase();
+                    String location = parts[2].trim();
+                    
+                    try {
+                        java.time.DayOfWeek day = java.time.DayOfWeek.valueOf(dayString);
+                        fieldEvents.add(new FieldEvent(time, location, day));
+                    } catch (IllegalArgumentException e) {
+                        log.warn("Invalid day of week in fbevents.csv: " + dayString);
+                    }
+                } else {
+                    log.warn("Invalid line in fbevents.csv: " + line);
+                }
+            }
+        } catch (IOException e) {
+            log.error("Error reading FieldEvent.csv file.");
+        } catch (NullPointerException e) {
+            log.error("FieldEvent.csv file not found in resources folder.");
+        }
+    }
+
+    private static void scheduleFBTimers(JDA jda) {
+        //Silverfrost Field Boss Timers
+        Runnable fbTimerTask = () -> {
+            System.out.println("Checking for scheduled FB spawns...");
+
+            Instant now = Instant.now();
+
+            fieldEvents.stream()
+                .filter(fe -> fe.getDay().getValue() == now.atZone(java.time.ZoneId.of("-06:00")).getDayOfWeek().getValue())
+                .forEach(fe -> {
+                    Instant eventTime = now.atZone(java.time.ZoneId.of("-06:00"))
+                                            .withHour(fe.getHour())
+                                            .withMinute(fe.getMinute())
+                                            .withSecond(0)
+                                            .withNano(0)
+                                            .toInstant();
+                    long secondsUntilEvent = Duration.between(now, eventTime).getSeconds();
+                    if(secondsUntilEvent >= 850 && secondsUntilEvent < 900) {
+                        String messageText = "@FieldBoss > `Silverfrost Field Boss Spawn Imminent! (" + fe.getLocation() + ")`     " + "<t:" + eventTime.getEpochSecond() + ":R>";
+                        jda.getTextChannelById(1420223400869363834L).sendMessage(messageText).queue(
+                            //Automated deletion commented out while I test
+                            // msg -> {
+                            //     try {
+                            //         scheduler.schedule(() -> msg.delete().queue(), 60, TimeUnit.MINUTES);
+                            //     } catch (Exception e) {
+                            //         log.warn("Field boss spawn message failed to delete. Most likely a server admin deleted it.");
+                            //     }
+                            // }
+                            );
+                    }
+                });
+
+            // jda.getTextChannelById(1342573327247741039L).sendMessage("Test minute increment message").queue();
+        };
+
+        //Run every 1 minute, starting at the next full minute
+        //long delay = 60 - Instant.now().getEpochSecond() % 60;
+        scheduler.scheduleAtFixedRate(fbTimerTask, 0, 1, TimeUnit.MINUTES);
     }
 }
