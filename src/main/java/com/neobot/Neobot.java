@@ -72,8 +72,6 @@ public class Neobot extends ListenerAdapter {
         for(WorldBoss wb : WorldBoss.values()) {
             newCommands.add(Commands.slash(wb.getCommandName(), wb.getDisplayName() + " World Boss options"));
         }
-        // newCommands.add(Commands.slash("server", "Select which server you are playing on").addOption(OptionType.STRING, "server", "Use Heaven's Reach (HR) or Viridian Coast (VC) to set the server for this channel"));
-        // newCommands.add(Commands.slash("global", "Enable/disable countdowns from other discord servers").addOption(OptionType.BOOLEAN, "global", "Use TRUE to enable and FALSE to disable global countdowns for this channel"));
         newCommands.add(Commands.slash("help", "About the bot"));
         newCommands.add(Commands.slash("wb", "Show all of the world boss slash commands"));
         jda.updateCommands().addCommands(newCommands).queue();
@@ -135,85 +133,6 @@ public class Neobot extends ListenerAdapter {
                  .queue();
             return;
         }
-
-        // /server
-        // if(event.getName().equals("server")) {
-        //     TextChannel channel = event.getChannel().asTextChannel();
-        //     OptionMapping option = event.getOption("server");
-        //     Boolean isHeavensReachServer = heavensReachChannels.containsKey(channel);
-        //     Boolean isViridianCoastServer = viridianCoastChannels.containsKey(channel);
-        //     if(option == null) {
-        //         if(isHeavensReachServer) {
-        //             event.reply("This channel is currently set to Heaven's Reach.").setEphemeral(true).queue();
-        //         } else if(isViridianCoastServer) {
-        //             event.reply("This channel is currently set to Viridian Coast.").setEphemeral(true).queue();
-        //         } else {
-        //             event.reply("This channel is not currently set to a server. Use /server <servername> to set the server.").setEphemeral(true).queue();
-        //         }
-        //         return;
-        //     }
-
-        //     String serverName = event.getOption("server").getAsString().toLowerCase();
-        //     Boolean global = isHeavensReachServer ? heavensReachChannels.get(channel) : viridianCoastChannels.get(channel);
-        //     if(global == null) global = false;
-        //     if(serverName.contains("h")) {
-        //         viridianCoastChannels.remove(channel);
-        //         heavensReachChannels.putIfAbsent(channel, global);
-        //         event.reply("This channel has been added to the Heaven's Reach server list.").queue();
-        //     } else if (serverName.contains("v")) {
-        //         heavensReachChannels.remove(channel);
-        //         viridianCoastChannels.putIfAbsent(channel, global);
-        //         event.reply("This channel has been added to the Viridian Coast server list.").queue();
-        //     } else {
-        //         event.reply("Your server name was not recognized. No changes were made.").setEphemeral(true).queue();
-        //     }
-        //     return;
-        // }
-
-        // /global
-        // if(event.getName().equals("global")) {
-        //     TextChannel channel = event.getChannel().asTextChannel();
-        //     OptionMapping option = event.getOption("global");
-        //     if(option == null) {
-        //         if(heavensReachChannels.containsKey(channel)) {
-        //             Boolean value = heavensReachChannels.get(channel);
-        //             event.reply("This channel is currently set to Global " + (value ? "ON" : "OFF") + ". It will " + (value ? "" : "NOT ") + "receive messages from other servers.").setEphemeral(true).queue();
-        //         } else if(viridianCoastChannels.containsKey(channel)) {
-        //             Boolean value = viridianCoastChannels.get(channel);
-        //             event.reply("This channel is currently set to Global " + (value ? "ON" : "OFF") + ". It will " + (value ? "" : "NOT ") + "receive messages from other servers.").setEphemeral(true).queue();
-        //         } else {
-        //             event.reply("You first need to specify a game server for this channel using /server.").setEphemeral(true).queue();
-        //         }
-        //         return;
-        //     }
-
-        //     Boolean globalOption;
-        //     try {
-        //         globalOption = event.getOption("global").getAsBoolean();
-        //     } catch (IllegalStateException e) {
-        //         event.reply("You need to provide TRUE or FALSE for the /global command.").setEphemeral(true).queue();
-        //         return;
-        //     }
-            
-        //     if(heavensReachChannels.containsKey(channel)) {
-        //         heavensReachChannels.put(channel, globalOption);
-        //         if(globalOption) {
-        //             event.reply("Global ON. You will now receive countdowns from other Heaven's Reach servers.").queue();
-        //         } else {
-        //             event.reply("Global OFF. You will NOT receive countdowns from other servers.").queue();
-        //         }
-        //     } else if(viridianCoastChannels.containsKey(channel)) {
-        //         viridianCoastChannels.put(channel, globalOption);
-        //         if(globalOption) {
-        //             event.reply("Global ON. You will now receive countdowns from other Viridian Coast servers.").queue();
-        //         } else {
-        //             event.reply("Global OFF. You will NOT receive countdowns from other servers.").queue();
-        //         }
-        //     } else {
-        //         event.reply("You first need to specify a game server for this channel using /server.").setEphemeral(true).queue();
-        //     }
-        //     return;
-        // }
 
         //All other world boss slash commands handled here
         WorldBoss wb = WorldBoss.valueOf(event.getName());
@@ -435,10 +354,10 @@ public class Neobot extends ListenerAdapter {
                         java.time.DayOfWeek day = java.time.DayOfWeek.valueOf(dayString);
                         fieldEvents.add(new FieldEvent(time, location, day));
                     } catch (IllegalArgumentException e) {
-                        log.warn("Invalid day of week in fbevents.csv: " + dayString);
+                        log.warn("Invalid day of week in FieldEvent.csv: " + dayString);
                     }
                 } else {
-                    log.warn("Invalid line in fbevents.csv: " + line);
+                    log.warn("Invalid line in FieldEvent.csv: " + line);
                 }
             }
         } catch (IOException e) {
@@ -458,23 +377,13 @@ public class Neobot extends ListenerAdapter {
             fieldEvents.stream()
                 .filter(fe -> fe.getDay().getValue() == now.atZone(java.time.ZoneId.of("-06:00")).getDayOfWeek().getValue())
                 .forEach(fe -> {
-                    Instant eventTime = now.atZone(java.time.ZoneId.of("-06:00"))
-                                            .withHour(fe.getHour())
-                                            .withMinute(fe.getMinute())
-                                            .withSecond(0)
-                                            .withNano(0)
-                                            .toInstant();
+                    Instant eventTime = fe.getInstant();
                     long secondsUntilEvent = Duration.between(now, eventTime).getSeconds();
                     if(secondsUntilEvent >= 245 && secondsUntilEvent < 300) {
                         FieldEvent nextEvent = fieldEvents.indexOf(fe) == fieldEvents.size() - 1 ? fieldEvents.get(0) : fieldEvents.get(fieldEvents.indexOf(fe) + 1);
-                        Instant nextEventTime = now.atZone(java.time.ZoneId.of("-06:00"))
-                                            .withHour(nextEvent.getHour())
-                                            .withMinute(nextEvent.getMinute())
-                                            .withSecond(0)
-                                            .withNano(0)
-                                            .toInstant();
-                        String messageText = "`Silverfrost Field Boss Spawn Imminent! (" + fe.getLocation() + ")`     " + "<t:" + eventTime.getEpochSecond() + ":R>    @ " + fe.getHour()%12 +":" + fe.getMinute()+" ST\n" + 
-                        "`Next Field Boss: (" + nextEvent.getLocation() + ")`     " + "<t:" + nextEventTime.getEpochSecond() + ":R>     @ "+ nextEvent.getHour()%12 +":" + nextEvent.getMinute()+ " ST";
+                        Instant nextEventTime = nextEvent.getInstant();
+                        String messageText = "`Silverfrost Field Boss Spawn Imminent! (" + fe.getLocation() + ")`     " + "<t:" + eventTime.getEpochSecond() + ":R>    @ " + fe.getFormattedTime() + " ST\n" + 
+                        "`Next Field Boss: (" + nextEvent.getLocation() + ")`     " + "<t:" + nextEventTime.getEpochSecond() + ":R>     @ "+ nextEvent.getFormattedTime() + " ST";
                         
                         jda.getTextChannelById(neobotChannel).sendMessage(messageText).queue(
                             //Automated deletion commented out while I test
@@ -488,8 +397,6 @@ public class Neobot extends ListenerAdapter {
                             );
                     }
                 });
-
-            // jda.getTextChannelById(1342573327247741039L).sendMessage("Test minute increment message").queue();
         };
 
         //Run every 1 minute, starting at the next full minute
