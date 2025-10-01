@@ -37,7 +37,8 @@ public class Neobot extends ListenerAdapter {
     //Bns live character lookup page (maybe NEO later?)
     //  http://na-bns.ncsoft.com/ingame/bs/character/search/info?c=
 
-    private static final String botInviteURL = "https://discord.com/oauth2/authorize?client_id=1341938087156252672&permissions=563484677240896&integration_type=0&scope=bot";
+    //Commented out for now until the bot is functional in other servers (if ever)
+    // private static final String botInviteURL = "";
 
     private static final long discordUserInputDelaySeconds = 5;
     private static final long timeAfterSpawnMsgDeletionMinutes = 5;
@@ -51,6 +52,11 @@ public class Neobot extends ListenerAdapter {
 
     private HashMap<TextChannel, Boolean> heavensReachChannels = new HashMap<TextChannel, Boolean>();
     private HashMap<TextChannel, Boolean> viridianCoastChannels = new HashMap<TextChannel, Boolean>();
+
+    //Test channel
+    //private static final long neobotChannel = 1342573327247741039L;
+    //Prod channel
+    private static final long neobotChannel = 1420223400869363834L;
 
     public static void main(String[] args) throws InterruptedException {
         JDA jda = JDABuilder
@@ -68,7 +74,7 @@ public class Neobot extends ListenerAdapter {
         }
         // newCommands.add(Commands.slash("server", "Select which server you are playing on").addOption(OptionType.STRING, "server", "Use Heaven's Reach (HR) or Viridian Coast (VC) to set the server for this channel"));
         // newCommands.add(Commands.slash("global", "Enable/disable countdowns from other discord servers").addOption(OptionType.BOOLEAN, "global", "Use TRUE to enable and FALSE to disable global countdowns for this channel"));
-        // newCommands.add(Commands.slash("help", "How to use the bot"));
+        newCommands.add(Commands.slash("help", "About the bot"));
         newCommands.add(Commands.slash("wb", "Show all of the world boss slash commands"));
         jda.updateCommands().addCommands(newCommands).queue();
 
@@ -98,7 +104,7 @@ public class Neobot extends ListenerAdapter {
         if(event.getGuild().isDetached()) {
             log.info("Detached guild detected.");
             event.reply("This bot needs to be added as a user to your server and have permissions in this channel.")
-                 .addActionRow(Button.link(botInviteURL, "Add the bot user"))
+                //  .addActionRow(Button.link(botInviteURL, "Add the bot user"))
                  .setEphemeral(true).queue();
             return;
         }
@@ -117,25 +123,18 @@ public class Neobot extends ListenerAdapter {
         }
 
         // /help
-        // if(event.getName().equals("help")) {
-        //     EmbedBuilder eb = new EmbedBuilder();
-        //     eb.setAuthor("NEOBot");
-        //     eb.setColor(customEmbedColor);
-        //     eb.setDescription("Hi! Thanks for using my bot. To get started, use /wb to see the available World Boss " +
-        //                       "commands. Once you are comfortable with using the commands and starting countdowns, you " + 
-        //                       "can use /server <servername> to set **THIS CHANNEL**'s server setting to Heaven's Reach " +
-        //                       "or Viridian Coast. If you like, you can then turn on the global feature using /global true. " +
-        //                       "That will enable you to get boss spawn countdowns from other Discord channels that are on the " +
-        //                       "same server setting.\n\n**Please note:** at this time, the bot does not store your preferences. " + 
-        //                       "If there is a server outage or a new version of the bot is launched, you will have to " +
-        //                       "reapply your /server and /global settings.");
-        //     eb.setFooter("@teqsupport");
-        //     event.reply("")
-        //          .addEmbeds(eb.build())
-        //          .setEphemeral(true)
-        //          .queue();
-        //     return;
-        // }
+        if(event.getName().equals("help")) {
+            EmbedBuilder eb = new EmbedBuilder();
+            eb.setAuthor("NEOBot");
+            eb.setColor(customEmbedColor);
+            eb.setDescription("Hi! Thanks for checking out my bot. Currently, it is only used in a specific channel to send timers for world events (NA).");
+            eb.setFooter("@teqsupport");
+            event.reply("")
+                 .addEmbeds(eb.build())
+                 .setEphemeral(true)
+                 .queue();
+            return;
+        }
 
         // /server
         // if(event.getName().equals("server")) {
@@ -466,9 +465,18 @@ public class Neobot extends ListenerAdapter {
                                             .withNano(0)
                                             .toInstant();
                     long secondsUntilEvent = Duration.between(now, eventTime).getSeconds();
-                    if(secondsUntilEvent >= 850 && secondsUntilEvent < 900) {
-                        String messageText = "@FieldBoss > `Silverfrost Field Boss Spawn Imminent! (" + fe.getLocation() + ")`     " + "<t:" + eventTime.getEpochSecond() + ":R>";
-                        jda.getTextChannelById(1420223400869363834L).sendMessage(messageText).queue(
+                    if(secondsUntilEvent >= 245 && secondsUntilEvent < 300) {
+                        FieldEvent nextEvent = fieldEvents.indexOf(fe) == fieldEvents.size() - 1 ? fieldEvents.get(0) : fieldEvents.get(fieldEvents.indexOf(fe) + 1);
+                        Instant nextEventTime = now.atZone(java.time.ZoneId.of("-06:00"))
+                                            .withHour(nextEvent.getHour())
+                                            .withMinute(nextEvent.getMinute())
+                                            .withSecond(0)
+                                            .withNano(0)
+                                            .toInstant();
+                        String messageText = "`Silverfrost Field Boss Spawn Imminent! (" + fe.getLocation() + ")`     " + "<t:" + eventTime.getEpochSecond() + ":R>    @ " + fe.getHour()%12 +":" + fe.getMinute()+" ST\n" + 
+                        "`Next Field Boss: (" + nextEvent.getLocation() + ")`     " + "<t:" + nextEventTime.getEpochSecond() + ":R>     @ "+ nextEvent.getHour()%12 +":" + nextEvent.getMinute()+ " ST";
+                        
+                        jda.getTextChannelById(neobotChannel).sendMessage(messageText).queue(
                             //Automated deletion commented out while I test
                             // msg -> {
                             //     try {
