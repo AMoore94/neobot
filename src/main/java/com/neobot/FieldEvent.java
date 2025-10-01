@@ -27,12 +27,14 @@ public class FieldEvent {
     }
 
     public Instant getInstant() {
-        return Instant.now().atZone(java.time.ZoneId.of("-06:00"))
-                                            .withHour(getHour())
-                                            .withMinute(getMinute())
+        Instant announceTime = Instant.now().atZone(java.time.ZoneId.of("-06:00"))
+                                            .withHour(hour)
+                                            .withMinute(minute)
                                             .withSecond(0)
                                             .withNano(0)
                                             .toInstant();
+
+        return hour < 2 ? announceTime.plus(java.time.Duration.ofDays(1)) : announceTime;
     }
 
 }
