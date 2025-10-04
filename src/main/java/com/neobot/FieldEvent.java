@@ -23,7 +23,7 @@ public class FieldEvent {
 
     public String getFormattedTime() {
         int displayHour = (hour % 12 == 0) ? 12 : hour % 12;
-        return String.format("%02d:%02d", displayHour, minute);
+        return String.format("%d:%02d", displayHour, minute);
     }
 
     public Instant getInstant() {
@@ -34,7 +34,7 @@ public class FieldEvent {
                                             .withNano(0)
                                             .toInstant();
 
-        return hour < 2 ? announceTime.plus(java.time.Duration.ofDays(1)) : announceTime;
+        return announceTime;
     }
 
 }
