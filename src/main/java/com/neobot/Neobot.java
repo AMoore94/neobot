@@ -3,6 +3,7 @@ package com.neobot;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -19,6 +20,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -148,7 +150,29 @@ public class Neobot extends ListenerAdapter {
         String buttonId =  event.getComponentId();
         List<String> buttonInputs = Arrays.asList(buttonId.split("-"));
 
-        if(buttonInputs.size() > 1) {
+        if(buttonInputs.size() > 0) {
+            //Check for reminder buttons first
+            if(buttonInputs.get(0).equals("reminder") && buttonInputs.size() >= 2) {
+                try {
+                    long unixTimestamp = Long.parseLong(buttonInputs.get(1));
+                    event.reply(event.getUser().getAsMention() + " Okay! I will remind you " + discordTimestamp(unixTimestamp) + ".")
+                         .setEphemeral(true)
+                         .queue();
+                    scheduler.schedule(() -> event.getUser().openPrivateChannel()
+                                                        .flatMap(channel -> channel.sendMessage("Reminder: There's an event happening soon! " + event.getMessage().getJumpUrl())) 
+                                                        .queue(),
+                                                        unixTimestamp - Instant.now().getEpochSecond(),
+                                                        TimeUnit.SECONDS);
+                } catch (NumberFormatException e) {
+                    log.error("Invalid reminder button ID: " + buttonId);
+                    event.reply("Sorry, something went wrong. Please try again.").setEphemeral(true).queue();
+                } catch (Exception e) {
+                    log.error("Error scheduling reminder: " + e.getMessage());
+                    event.reply("Sorry, something went wrong. Please try again.").setEphemeral(true).queue();
+                }
+                return;
+            }
+        } else if(buttonInputs.size() > 1) {
             String buttonPrefix = buttonInputs.get(0) + "-";
             String channel = buttonInputs.get(1);
             WorldEvent we = worldEvents.stream().filter(e -> e.getButtonPrefix().equals(buttonPrefix)).findFirst().orElse(null);
@@ -373,9 +397,12 @@ public class Neobot extends ListenerAdapter {
             System.out.println("Checking for scheduled FB spawns...");
 
             Instant now = Instant.now();
+            ZonedDateTime zdt = now.atZone(java.time.ZoneId.of("-06:00"));
+
+            
 
             fieldEvents.stream()
-                .filter(fe -> fe.getDay().getValue() == now.atZone(java.time.ZoneId.of("-06:00")).getDayOfWeek().getValue())
+                .filter(fe -> fe.getDay().getValue() == zdt.getDayOfWeek().getValue())
                 .forEach(fe -> {
                     Instant eventTime = fe.getInstant();
                     long secondsUntilEvent = Duration.between(now, eventTime).getSeconds();
@@ -397,6 +424,18 @@ public class Neobot extends ListenerAdapter {
                             );
                     }
                 });
+
+            //Check for gold boss spawns
+            ArrayList<Integer> goldBossHours = new ArrayList<Integer>(Arrays.asList(10, 13, 16, 19, 22, 1));
+            if(goldBossHours.contains(zdt.getHour()+1) && zdt.getMinute() == 45) {
+                ZonedDateTime eventTime = zdt.plusHours(1).withMinute(0).withSecond(0).withNano(0);
+                List<Role> roles = jda.getRolesByName("GoldBoss", true);
+                String roleMention = roles.isEmpty() ? "" : roles.get(0).getAsMention() + " ";
+                List<Button> goldBossButtons = new ArrayList<Button>();
+                goldBossButtons.add(Button.secondary("reminder-" + eventTime.minusMinutes(10).toInstant().getEpochSecond(), "10 min reminder"));
+                goldBossButtons.add(Button.secondary("reminder-" + eventTime.minusMinutes(5).toInstant().getEpochSecond(), "5 min reminder"));
+                jda.getTextChannelById(neobotChannel).sendMessage(roleMention + "Gold boss spawning " + "<t:" + eventTime.toInstant().getEpochSecond() + ":R>" + ".").addActionRow(goldBossButtons).queue();
+            }
         };
 
         //Run every 1 minute, starting at the next full minute
