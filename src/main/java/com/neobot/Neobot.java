@@ -20,6 +20,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
@@ -89,6 +90,7 @@ public class Neobot extends ListenerAdapter {
 
     @Override
     public void onReady(ReadyEvent event) {
+        event.getJDA().getTextChannelById(neobotChannel).sendMessage("**NEOBot has been restarted. WARNING: Any previously scheduled reminders may have been lost.**").queue();
         log.info("Bot successfully deployed.");
     }
 
@@ -155,7 +157,7 @@ public class Neobot extends ListenerAdapter {
             if(buttonInputs.get(0).equals("reminder") && buttonInputs.size() >= 2) {
                 try {
                     long unixTimestamp = Long.parseLong(buttonInputs.get(1));
-                    event.reply(event.getUser().getAsMention() + " Okay! I will remind you " + discordTimestamp(unixTimestamp) + ".")
+                    event.reply(event.getUser().getAsMention() + " Okay! I will remind you about this event " + discordTimestamp(unixTimestamp) + ".")
                          .setEphemeral(true)
                          .queue();
                     scheduler.schedule(() -> event.getUser().openPrivateChannel()
@@ -398,21 +400,22 @@ public class Neobot extends ListenerAdapter {
 
             Instant now = Instant.now();
             ZonedDateTime zdt = now.atZone(java.time.ZoneId.of("-06:00"));
-
-            
+            long minutesPrior = 90;
+            TextChannel neobotTextChannel = jda.getTextChannelById(neobotChannel);
+            Guild guild = neobotTextChannel.getGuild();
 
             fieldEvents.stream()
                 .filter(fe -> fe.getDay().getValue() == zdt.getDayOfWeek().getValue())
                 .forEach(fe -> {
                     Instant eventTime = fe.getInstant();
                     long secondsUntilEvent = Duration.between(now, eventTime).getSeconds();
-                    if(secondsUntilEvent >= 245 && secondsUntilEvent < 300) {
-                        FieldEvent nextEvent = fieldEvents.indexOf(fe) == fieldEvents.size() - 1 ? fieldEvents.get(0) : fieldEvents.get(fieldEvents.indexOf(fe) + 1);
-                        Instant nextEventTime = nextEvent.getInstant();
-                        String messageText = "`Silverfrost Field Boss Spawn Imminent! (" + fe.getLocation() + ")`     " + "<t:" + eventTime.getEpochSecond() + ":R>    @ " + fe.getFormattedTime() + " ST\n" + 
-                        "`Next Field Boss: (" + nextEvent.getLocation() + ")`     " + "<t:" + nextEventTime.getEpochSecond() + ":R>     @ "+ nextEvent.getFormattedTime() + " ST";
-                        
-                        jda.getTextChannelById(neobotChannel).sendMessage(messageText).queue(
+                    if( secondsUntilEvent >= minutesPrior*60-60 && secondsUntilEvent <= minutesPrior*60 ) {
+                        String messageText = "`Silverfrost Field Boss at " + fe.getLocation() + "`     " + "<t:" + eventTime.getEpochSecond() + ":R>    @ " + fe.getFormattedTime() + " ST";
+                        List<Button> fieldBossButtons = new ArrayList<Button>();
+                        fieldBossButtons.add(Button.secondary("reminder-" + eventTime.minusSeconds(900).getEpochSecond(), "15 min reminder"));
+                        fieldBossButtons.add(Button.secondary("reminder-" + eventTime.minusSeconds(600).getEpochSecond(), "10 min reminder"));
+                        fieldBossButtons.add(Button.secondary("reminder-" + eventTime.minusSeconds(300).getEpochSecond(), "5 min reminder"));
+                        neobotTextChannel.sendMessage(messageText).addActionRow(fieldBossButtons).queue(
                             //Automated deletion commented out while I test
                             // msg -> {
                             //     try {
@@ -427,16 +430,17 @@ public class Neobot extends ListenerAdapter {
 
             //Check for gold boss spawns
             ArrayList<Integer> goldBossHours = new ArrayList<Integer>(Arrays.asList(10, 13, 16, 19, 22, 1));
-            if(goldBossHours.contains(zdt.getHour()+1) && zdt.getMinute() == 40) {
-                ZonedDateTime eventTime = zdt.plusHours(1).withMinute(0).withSecond(0).withNano(0);
+            if(goldBossHours.contains(zdt.getHour()+2) && zdt.getMinute() == 30) {
+                ZonedDateTime eventTime = zdt.plusHours(2).withMinute(0).withSecond(0).withNano(0);
                 List<Role> roles = jda.getRolesByName("GoldBoss", true);
                 //Find the first mentionable role named "GoldBoss"
-                Role goldBossRole = roles.stream().filter(r -> r.isMentionable()).findFirst().orElse(null);
+                Role goldBossRole = roles.stream().filter(r -> r.isMentionable() && r.getGuild() == guild).findFirst().orElse(null);
                 String roleMention = goldBossRole == null ? "" : goldBossRole.getAsMention() + " ";
                 List<Button> goldBossButtons = new ArrayList<Button>();
+                goldBossButtons.add(Button.secondary("reminder-" + eventTime.minusMinutes(15).toInstant().getEpochSecond(), "15 min reminder"));
                 goldBossButtons.add(Button.secondary("reminder-" + eventTime.minusMinutes(10).toInstant().getEpochSecond(), "10 min reminder"));
                 goldBossButtons.add(Button.secondary("reminder-" + eventTime.minusMinutes(5).toInstant().getEpochSecond(), "5 min reminder"));
-                jda.getTextChannelById(neobotChannel).sendMessage(roleMention + "Gold boss announce " + "<t:" + eventTime.toInstant().getEpochSecond() + ":R>" + ".").addActionRow(goldBossButtons).queue();
+                neobotTextChannel.sendMessage(roleMention + "`Gold boss announce`     " + "<t:" + eventTime.toInstant().getEpochSecond() + ":R>").addActionRow(goldBossButtons).queue();
             }
         };
 
