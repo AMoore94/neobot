@@ -432,7 +432,7 @@ public class Neobot extends ListenerAdapter {
                 List<Role> roles = jda.getRolesByName("GoldBoss", true);
                 //Find the first mentionable role named "GoldBoss"
                 Role goldBossRole = roles.stream().filter(r -> r.isMentionable()).findFirst().orElse(null);
-                String roleMention = goldBossRole == null ? "" : roles.get(0).getAsMention() + " ";
+                String roleMention = goldBossRole == null ? "" : goldBossRole.getAsMention() + " ";
                 List<Button> goldBossButtons = new ArrayList<Button>();
                 goldBossButtons.add(Button.secondary("reminder-" + eventTime.minusMinutes(10).toInstant().getEpochSecond(), "10 min reminder"));
                 goldBossButtons.add(Button.secondary("reminder-" + eventTime.minusMinutes(5).toInstant().getEpochSecond(), "5 min reminder"));
