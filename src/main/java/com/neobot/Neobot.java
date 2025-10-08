@@ -400,7 +400,7 @@ public class Neobot extends ListenerAdapter {
 
             Instant now = Instant.now();
             ZonedDateTime zdt = now.atZone(java.time.ZoneId.of("-06:00"));
-            long minutesPrior = 90;
+            long minutesPrior = 60;
             TextChannel neobotTextChannel = jda.getTextChannelById(neobotChannel);
             Guild guild = neobotTextChannel.getGuild();
 
@@ -430,8 +430,8 @@ public class Neobot extends ListenerAdapter {
 
             //Check for gold boss spawns
             ArrayList<Integer> goldBossHours = new ArrayList<Integer>(Arrays.asList(10, 13, 16, 19, 22, 1));
-            if(goldBossHours.contains(zdt.getHour()+2) && zdt.getMinute() == 30) {
-                ZonedDateTime eventTime = zdt.plusHours(2).withMinute(0).withSecond(0).withNano(0);
+            if(goldBossHours.contains(zdt.getHour()+1) && zdt.getMinute() == 0) {
+                ZonedDateTime eventTime = zdt.plusHours(1).withMinute(0).withSecond(0).withNano(0);
                 List<Role> roles = jda.getRolesByName("GoldBoss", true);
                 //Find the first mentionable role named "GoldBoss"
                 Role goldBossRole = roles.stream().filter(r -> r.isMentionable() && r.getGuild() == guild).findFirst().orElse(null);
