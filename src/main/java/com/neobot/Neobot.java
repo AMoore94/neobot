@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Executors;
@@ -23,6 +22,7 @@ import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.command.UserContextInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -41,18 +41,11 @@ public class Neobot extends ListenerAdapter {
     //Commented out for now until the bot is functional in other servers (if ever)
     // private static final String botInviteURL = "";
 
-    private static final long discordUserInputDelaySeconds = 5;
-    private static final long timeAfterSpawnMsgDeletionMinutes = 5;
-
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
-    private static final List<WorldEvent> worldEvents = new ArrayList<WorldEvent>();
 
     private static final int customEmbedColor = 3 << 16 | 252 << 8 | 190;
 
     private static final List<FieldEvent> fieldEvents = new ArrayList<FieldEvent>();
-
-    private HashMap<TextChannel, Boolean> heavensReachChannels = new HashMap<TextChannel, Boolean>();
-    private HashMap<TextChannel, Boolean> viridianCoastChannels = new HashMap<TextChannel, Boolean>();
 
     private static long neobotChannel;
 
@@ -69,15 +62,8 @@ public class Neobot extends ListenerAdapter {
 
         //Verify all necessary commands exist:
         List<SlashCommandData> newCommands = new ArrayList<SlashCommandData>();
-        for(WorldBoss wb : WorldBoss.values()) {
-            newCommands.add(Commands.slash(wb.getCommandName(), wb.getDisplayName() + " World Boss options"));
-        }
         newCommands.add(Commands.slash("help", "About the bot"));
-        newCommands.add(Commands.slash("wb", "Show all of the world boss slash commands"));
         jda.updateCommands().addCommands(newCommands).queue();
-
-        //Add all the world events to a static list for use here
-        worldEvents.addAll(Arrays.asList(WorldEvent.values()));
 
         //Load field events from csv file
         loadFieldEvents();
@@ -108,19 +94,6 @@ public class Neobot extends ListenerAdapter {
             return;
         }
 
-        // /wb
-        if(event.getName().equals("wb")) {
-            EmbedBuilder eb = new EmbedBuilder();
-            eb.setTitle("World Boss Commands:");
-            eb.setDescription(createWBDescription());
-            eb.setColor(customEmbedColor);
-            event.reply("")
-                 .addEmbeds(eb.build())
-                 .setEphemeral(true)
-                 .queue();
-        return;
-        }
-
         // /help
         if(event.getName().equals("help")) {
             EmbedBuilder eb = new EmbedBuilder();
@@ -134,14 +107,6 @@ public class Neobot extends ListenerAdapter {
                  .queue();
             return;
         }
-
-        //All other world boss slash commands handled here
-        WorldBoss wb = WorldBoss.valueOf(event.getName());
-        List<WorldEvent> events = wb.getEvents();
-        event.reply("")
-             .addActionRow(createButtons(events))
-             .setEphemeral(true)
-             .queue();
     }
 
     @Override
@@ -171,34 +136,12 @@ public class Neobot extends ListenerAdapter {
                 }
                 return;
             }
-        } else if(buttonInputs.size() > 1) {
-            String buttonPrefix = buttonInputs.get(0) + "-";
-            String channel = buttonInputs.get(1);
-            WorldEvent we = worldEvents.stream().filter(e -> e.getButtonPrefix().equals(buttonPrefix)).findFirst().orElse(null);
-            if(we != null) {
-                sendEventTimestampMessage(event, we.getDisplayName(), channel, we.getSpawnDelayMinutes());
-            }
-        } else {
-            WorldEvent we = worldEvents.stream().filter(e -> e.getButtonId().equals(buttonId)).findFirst().orElse(null);
-            if(we != null) {
-                sendChannelPromptMessage(event, we.getButtonReplyText(), we.getButtonPrefix());
-            }
         }
     }
 
-    //Helper methods
-    /**
-     * Creates Buttons for use in an ActionRow
-     * @param buttonIDPrefix
-     * @param startIndex
-     * @return List of 5 Button that are labeled starting with startIndex given
-     */
-    private List<Button> createActionRowOfButtons(String buttonIDPrefix, int startIndex) {
-        List<Button> actionRowList = new ArrayList<Button>();
-        for(int i = startIndex; i < startIndex+5; i++) {
-            actionRowList.add(Button.secondary(buttonIDPrefix + i, String.valueOf(i)));
-        }
-        return actionRowList;
+    @Override
+    public void onUserContextInteraction(UserContextInteractionEvent event) {
+        log.info("User context interaction detected: " + event.getName());
     }
 
     /**
@@ -270,104 +213,12 @@ public class Neobot extends ListenerAdapter {
     }
 
     /**
-     * Sends a timestamped message in the event's text channel formatted nicely with the boss name and respawn timer
-     * @param event
-     * @param bossName
-     * @param channel
-     * @param delayMinutes
-     */
-    private void sendEventTimestampMessage(ButtonInteractionEvent event, String bossName, String channel, long delayMinutes) {
-        Instant now = Instant.now();
-        event.getMessage().delete().queue();
-        event.deferEdit().queue();
-        Instant spawnTime = now.plus(Duration.ofMinutes(delayMinutes)).minus(Duration.ofSeconds(discordUserInputDelaySeconds));
-        long unixTimestamp = spawnTime.getEpochSecond();
-        String quote = bossName.startsWith("Mutated") ? "> " : "";
-        channel = "Channel " + channel;
-        String messageText = quote + "`" + centeredString(bossName, 30-quote.length()) + "|" + centeredString(channel, 15) + "|`     " + discordTimestamp(unixTimestamp);
-        TextChannel textChannel = event.getChannel().asTextChannel();
-
-        //Send the default message
-        sendTimestampMessage(textChannel, messageText, delayMinutes);
-
-        //Send global countdowns:
-        //If channel is a Heaven's Reach channel
-        if(heavensReachChannels.containsKey(textChannel)) {
-            heavensReachChannels.forEach((key, value) -> {
-                if(value && !key.equals(textChannel)) {
-                    sendTimestampMessage(key, messageText, delayMinutes);
-                }
-            });
-        }
-        //If channel is a Viridian Coast channel
-        if(viridianCoastChannels.containsKey(textChannel)) {
-            viridianCoastChannels.forEach((key, value) -> {
-                if(value && !key.equals(textChannel)) {
-                    sendTimestampMessage(key, messageText, delayMinutes);
-                }
-            });
-        }
-    }
-
-    /**
-     * Sends a text message to a channel that deletes itself after:
-     *      delayMinutes + timeAfterSpawnMsgDeletionMinutes
-     * @param channel
-     * @param messageText
-     * @param delayMinutes
-     */
-    private void sendTimestampMessage(TextChannel channel, String messageText, long delayMinutes) {
-        channel.sendMessage(messageText).queue(message -> {
-            try {
-                scheduler.schedule(() -> message.delete().queue(), delayMinutes + timeAfterSpawnMsgDeletionMinutes, TimeUnit.MINUTES);
-            } catch (Exception e) {
-                log.warn("Spawn timer message failed to delete. Most likely a server admin deleted it.");
-            }
-        });
-    }
-
-    /**
-     * Sends a reply to a ButtonInteractionEvent with given prompt that has two ActionRow of 5 Button each with button IDs 1-10
-     * @param event
-     * @param prompt
-     * @param buttonIDprefix
-     */
-    private void sendChannelPromptMessage(ButtonInteractionEvent event, String prompt, String buttonIDprefix) {
-        event.reply(event.getUser().getAsMention() + prompt)
-                .addActionRow(createActionRowOfButtons(buttonIDprefix, 1))
-                // .addActionRow(createActionRowOfButtons(buttonIDprefix, 6))
-                // .addActionRow(createActionRowOfButtons(buttonIDprefix, 11))
-                // .addActionRow(createActionRowOfButtons(buttonIDprefix, 16))
-                // .addActionRow(createActionRowOfButtons(buttonIDprefix, 21))
-                .setEphemeral(true)
-                .queue();
-    }
-
-    /**
-     * Creates a List of up to 5 Button for use in an ActionRow
-     * @param events
-     * @return List of Buttons for given list of WorldEvent, or null if the list has more than 5 WorldEvent
-     */
-    private List<Button> createButtons(List<WorldEvent> events) {
-        if(events == null) return null;
-        if(events.size() > 5) {
-            log.error("Too many events for a single row of buttons.");
-            return null;
-        }
-        List<Button> actionRowList = new ArrayList<Button>();
-        for(WorldEvent event : events) {
-            actionRowList.add(Button.primary(event.getButtonId(), event.getLabel()));
-        }
-        return actionRowList;
-    }
-
-    /**
      * Centers a String s into a padded String of given length, prioritizing Left padding
      * @param s
      * @param length
      * @return
      */
-    private String centeredString(String s, int length) {
+    public String centeredString(String s, int length) {
         if(length <1) return "";
         if(s == null) return "";
         int diff = length - s.length();
@@ -384,19 +235,6 @@ public class Neobot extends ListenerAdapter {
         }
         return result;
     }
-
-    /**
-     * Creates a description for the /wb command using all available world boss commands
-     * @return
-     */
-    private String createWBDescription() {
-        String description = "";
-        for(WorldBoss wb : WorldBoss.values()) {
-            description += "**/" + wb.getCommandName() + "**\n";
-        }
-        return description;
-    }
-
 
     private static void loadFieldEvents() {
         //Load field events from csv file
