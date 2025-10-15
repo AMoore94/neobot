@@ -20,8 +20,6 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -437,7 +435,6 @@ public class Neobot extends ListenerAdapter {
             ZonedDateTime zdt = now.atZone(java.time.ZoneId.of("-06:00"));
             long minutesPrior = 60;
             TextChannel neobotTextChannel = jda.getTextChannelById(neobotChannel);
-            Guild guild = neobotTextChannel.getGuild();
 
             fieldEvents.stream()
                 .filter(fe -> fe.getDay().getValue() == zdt.getDayOfWeek().getValue())
