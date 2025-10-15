@@ -1,5 +1,5 @@
 *.DS_Store
 target/
 .vscode/
-token.properties
+neobot.properties
 dependency-reduced-pom.xml

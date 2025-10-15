@@ -56,12 +56,11 @@ public class Neobot extends ListenerAdapter {
     private HashMap<TextChannel, Boolean> heavensReachChannels = new HashMap<TextChannel, Boolean>();
     private HashMap<TextChannel, Boolean> viridianCoastChannels = new HashMap<TextChannel, Boolean>();
 
-    //Test channel
-    //private static final long neobotChannel = 1342573327247741039L;
-    //Prod channel
-    private static final long neobotChannel = 1420223400869363834L;
+    private static long neobotChannel;
 
     public static void main(String[] args) throws InterruptedException {
+        neobotChannel = getNeobotChannel();
+
         JDA jda = JDABuilder
             .createDefault(getToken())
             .setActivity(Activity.customStatus( "Use /help to learn about me!"))
@@ -214,7 +213,7 @@ public class Neobot extends ListenerAdapter {
     }
 
     /**
-     * Tries to get "neobot-token" from the environment config, otherwise looks for a "token.properties"
+     * Tries to get "neobot-token" from the environment config, otherwise looks for a "neobot.properties"
      * @return String token
      */
     private static String getToken() {
@@ -225,15 +224,51 @@ public class Neobot extends ListenerAdapter {
         //Try loading from properties file
         Properties properties = new Properties();
         try {
-            properties.load(Neobot.class.getClassLoader().getResourceAsStream("token.properties"));
+            properties.load(Neobot.class.getClassLoader().getResourceAsStream("neobot.properties"));
             return properties.getProperty("token");
         } catch (NullPointerException e) {
-            log.error("Token not found. Please create a token.properties file in the resources folder with the token.");
+            log.error("Token not found. Please create a neobot.properties file in the resources folder with the token.");
         } catch (IOException e) {
-            log.error("Error reading token.properties file.");
+            log.error("Error reading neobot.properties file.");
         }
 
         return null;
+    }
+
+    /**
+     * Loads the neobot channel ID from a properties file if it exists
+     */
+    private static long getNeobotChannel() {
+        //Try loading from environment variable
+        String channelString = System.getenv("neobot-channel");
+        if(channelString != null) {
+            try {
+                long channelId = Long.parseLong(channelString);
+                log.info("Loaded neobot channel ID from environment variable: " + channelId);
+                return channelId;
+            } catch (NumberFormatException e) {
+                log.error("Invalid neobot-channel ID in environment variable. Using default channel ID.");
+            }
+        }
+
+        //Load the neobot channel from properties file if it exists
+        Properties properties = new Properties();
+        try {
+            properties.load(Neobot.class.getClassLoader().getResourceAsStream("neobot.properties"));
+            String channelIdString = properties.getProperty("channel");
+            if(channelIdString != null) {
+                long channelId = Long.parseLong(channelIdString);
+                log.info("Loaded neobot channel ID from properties file: " + channelId);
+                return channelId;
+            }
+        } catch (NullPointerException e) {
+            log.warn("neobot.properties file not found in resources folder. Using default channel ID.");
+        } catch (IOException e) {
+            log.error("Error reading neobot.properties file.");
+        } catch (NumberFormatException e) {
+            log.error("Invalid neobot-channel ID in properties file. Using default channel ID.");
+        }
+        return 0L;
     }
 
     /**
