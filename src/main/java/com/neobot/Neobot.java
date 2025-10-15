@@ -416,14 +416,13 @@ public class Neobot extends ListenerAdapter {
                         fieldBossButtons.add(Button.secondary("reminder-" + eventTime.minusSeconds(600).getEpochSecond(), "10 min reminder"));
                         fieldBossButtons.add(Button.secondary("reminder-" + eventTime.minusSeconds(300).getEpochSecond(), "5 min reminder"));
                         neobotTextChannel.sendMessage(messageText).addActionRow(fieldBossButtons).queue(
-                            //Automated deletion commented out while I test
-                            // msg -> {
-                            //     try {
-                            //         scheduler.schedule(() -> msg.delete().queue(), 60, TimeUnit.MINUTES);
-                            //     } catch (Exception e) {
-                            //         log.warn("Field boss spawn message failed to delete. Most likely a server admin deleted it.");
-                            //     }
-                            // }
+                            msg -> {
+                                try {
+                                    scheduler.schedule(() -> msg.delete().queue(), 120, TimeUnit.MINUTES);
+                                } catch (Exception e) {
+                                    log.warn("Field boss spawn message failed to delete. Most likely a server admin deleted it.");
+                                }
+                            }
                             );
                     }
                 });
