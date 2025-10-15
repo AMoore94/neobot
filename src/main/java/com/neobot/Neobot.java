@@ -427,21 +427,6 @@ public class Neobot extends ListenerAdapter {
                             );
                     }
                 });
-
-            //Check for gold boss spawns
-            ArrayList<Integer> goldBossHours = new ArrayList<Integer>(Arrays.asList(10, 13, 16, 19, 22, 1));
-            if(goldBossHours.contains(zdt.getHour()+1) && zdt.getMinute() == 0) {
-                ZonedDateTime eventTime = zdt.plusHours(1).withMinute(0).withSecond(0).withNano(0);
-                List<Role> roles = jda.getRolesByName("GoldBoss", true);
-                //Find the first mentionable role named "GoldBoss"
-                Role goldBossRole = roles.stream().filter(r -> r.isMentionable() && r.getGuild() == guild).findFirst().orElse(null);
-                String roleMention = goldBossRole == null ? "" : goldBossRole.getAsMention() + " ";
-                List<Button> goldBossButtons = new ArrayList<Button>();
-                goldBossButtons.add(Button.secondary("reminder-" + eventTime.minusMinutes(15).toInstant().getEpochSecond(), "15 min reminder"));
-                goldBossButtons.add(Button.secondary("reminder-" + eventTime.minusMinutes(10).toInstant().getEpochSecond(), "10 min reminder"));
-                goldBossButtons.add(Button.secondary("reminder-" + eventTime.minusMinutes(5).toInstant().getEpochSecond(), "5 min reminder"));
-                neobotTextChannel.sendMessage(roleMention + "`Gold boss announce`     " + "<t:" + eventTime.toInstant().getEpochSecond() + ":R>").addActionRow(goldBossButtons).queue();
-            }
         };
 
         //Run every 1 minute, starting at the next full minute
